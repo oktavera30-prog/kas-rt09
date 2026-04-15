@@ -3,7 +3,7 @@ import {
   Users, Wallet, FileSpreadsheet, LayoutDashboard, PlusCircle, CheckCircle2, Circle,
   ArrowUpRight, ArrowDownRight, Download, Trash2, Save, Search, Info, Gift, Box, Calendar, 
   Wrench, QrCode, CreditCard, ChevronDown, ChevronUp, Copy, X, UploadCloud, Image as ImageIcon, 
-  FileText, Lock, Loader2, Edit3
+  FileText, Lock, Loader2, Edit3, ShieldAlert
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -11,11 +11,31 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
-// --- INIT FIREBASE (Di luar komponen sesuai aturan) ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// =====================================================================
+// PENGATURAN DATABASE UTAMA (ISI KODE BAPAK DI SINI NANTI)
+// Pak Ivan, silakan ganti teks "GANTI_DENGAN_..." di bawah ini
+// dengan kode yang Bapak dapatkan dari akun Firebase Bapak sendiri.
+// =====================================================================
+const manualFirebaseConfig = {
+  apiKey: "GANTI_DENGAN_API_KEY",
+  authDomain: "GANTI_DENGAN_AUTH_DOMAIN",
+  projectId: "GANTI_DENGAN_PROJECT_ID",
+  storageBucket: "GANTI_DENGAN_STORAGE_BUCKET",
+  messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID",
+  appId: "GANTI_DENGAN_APP_ID"
+};
+
+// --- INIT FIREBASE ---
+const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+const firebaseConfig = envConfig || manualFirebaseConfig;
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "GANTI_DENGAN_API_KEY";
+
+let app, auth, db;
+if (isConfigValid) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- DATA AWAL (Jika Database Kosong) ---
@@ -109,7 +129,10 @@ const INITIAL_TRANSACTIONS = [
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const YEARS = [2024, 2025, 2026];
 
-export default function App() {
+// =====================================================================
+// KOMPONEN UTAMA APLIKASI KAS RT
+// =====================================================================
+function MainApp() {
   // STATE FIREBASE & AUTH
   const [user, setUser] = useState(null);
   const [dbLoading, setDbLoading] = useState(true);
@@ -334,8 +357,6 @@ export default function App() {
     const [tempSaldo, setTempSaldo] = useState(0);
 
     const handleSaveSaldo = () => {
-      // Logika Sinkronisasi Otomatis: 
-      // Mengubah target saldo saat ini, lalu sistem menghitung mundur saldo awal tahun
       const targetSaldo = Number(tempSaldo) || 0;
       const sumSurplus = dataBulanIni.saldoAkhir - saldoAwalTahun;
       const newSaldoAwalTahun = targetSaldo - sumSurplus;
@@ -482,7 +503,7 @@ export default function App() {
       });
 
       setResidents(newResidents);
-      saveToDatabase('residents', newResidents); // Simpan ke Database
+      saveToDatabase('residents', newResidents);
     };
 
     const filteredWarga = residents.filter(r => 
@@ -614,7 +635,7 @@ export default function App() {
       });
       
       setResidents(newResidents);
-      saveToDatabase('residents', newResidents); // Simpan
+      saveToDatabase('residents', newResidents);
     };
 
     const filteredWarga = residents.filter(r => 
@@ -1196,4 +1217,60 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+// =====================================================================
+// PEMBUNGKUS APLIKASI (SISTEM SETUP OTOMATIS)
+// =====================================================================
+export default function App() {
+  if (!isConfigValid) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white max-w-lg w-full rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+          <div className="bg-red-50 p-6 border-b border-red-100 flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h1 className="text-xl font-extrabold text-slate-800 mb-2">Tinggal 1 Langkah Lagi, Pak Ivan!</h1>
+            <p className="text-sm text-slate-600 font-medium">Aplikasi belum terhubung ke brankas database Bapak.</p>
+          </div>
+
+          <div className="p-6">
+            <p className="text-sm text-slate-700 mb-4">
+              Karena data keuangan RT bersifat <strong>rahasia dan sangat sensitif</strong>, database harus dibuat menggunakan <strong>email Gmail pribadi Bapak</strong> agar saya (AI) atau orang lain tidak punya akses masuk.
+            </p>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+              <h3 className="font-bold text-slate-800 mb-3 text-sm">Cara Mendapatkan Kunci Database:</h3>
+              <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-600 font-medium">
+                <li>Buka tab baru dan kunjungi <a href="https://firebase.google.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">firebase.google.com</a>.</li>
+                <li>Klik tombol <strong>Get Started</strong>, lalu klik <strong>Create a Project</strong> (Beri nama Kas RT 09).</li>
+                <li>Di halaman depan proyek Firebase yang baru jadi, cari dan klik ikon Web <strong>(&lt;/&gt;)</strong> untuk mendaftarkan aplikasi.</li>
+                <li>Bapak akan melihat kotak berisi kode tulisan <code>apiKey</code>, <code>authDomain</code>, dll. Copy kode tersebut.</li>
+              </ol>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <h3 className="font-bold text-blue-800 mb-2 text-sm">Langkah Terakhir di StackBlitz:</h3>
+              <p className="text-xs text-blue-700 font-medium mb-2">Cari baris kode ke-15 di file <code>App.tsx</code> StackBlitz Bapak, lalu <strong>GANTI</strong> tulisan merahnya dengan kode milik Bapak.</p>
+              <pre className="text-[10px] bg-slate-800 text-green-400 p-3 rounded-lg overflow-x-auto shadow-inner">
+{`const manualFirebaseConfig = {
+  apiKey: "AIzaSyD.......",
+  authDomain: "kas-rt-.....",
+  // ...dan seterusnya
+};`}
+              </pre>
+            </div>
+
+            <p className="text-xs text-slate-400 text-center mt-6">
+              Begitu Bapak menempelkan kodenya di StackBlitz dan klik <strong>Push</strong>, layar panduan ini akan otomatis berubah selamanya menjadi <strong>Aplikasi Kas RT yang 100% siap pakai.</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Jika kunci sudah diisi, jalankan aplikasi aslinya!
+  return <MainApp />;
 }
