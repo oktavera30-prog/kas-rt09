@@ -193,8 +193,8 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     
-    // Path Firebase
-    const docRef = doc(db, 'kasRT', 'dataUtama');
+    // Perbaikan path agar otomatis berjalan mulus tanpa error permissions di lingkungan Canvas / Preview
+    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
     
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -229,7 +229,7 @@ export default function App() {
   const saveToDatabase = async (key, dataToSave) => {
     if(!user || userRole !== 'PENGURUS') return;
     try {
-      const docRef = doc(db, 'kasRT', 'dataUtama');
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
     } catch (err) {
       console.log("Penyimpanan cloud ditunda. Data tersimpan di aplikasi.");
