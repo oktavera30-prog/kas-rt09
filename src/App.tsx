@@ -3,7 +3,7 @@ import {
   Users, Wallet, FileSpreadsheet, LayoutDashboard, PlusCircle, CheckCircle2, Circle,
   ArrowUpRight, ArrowDownRight, Download, Trash2, Save, Search, Info, Gift, Box, Calendar, 
   Wrench, QrCode, CreditCard, ChevronDown, ChevronUp, Copy, X, UploadCloud, Image as ImageIcon, 
-  FileText, Lock, Loader2, Edit3, BookOpen, ShieldAlert
+  FileText, Lock, Loader2, Edit3, BookOpen, Heart
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -34,7 +34,6 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'kas-rt-09-app';
 
 // --- DATA AWAL ---
 const INITIAL_RESIDENTS = [
-  // DADALI
   { id: 1, name: 'BPK. KHAIDIR', block: 'CA12', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000, 1: 62000 }, 2026: {} } },
   { id: 2, name: 'BPK. BUDI', block: 'CA13', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 'LUNAS' }, 2026: {} } }, 
   { id: 3, name: 'BPK. SINGGIH', block: 'CA16', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000, 1: 62000 }, 2026: {} } },
@@ -57,7 +56,6 @@ const INITIAL_RESIDENTS = [
   { id: 20, name: 'BPK. IWAN', block: 'CB11', defaultAmount: 63000, payments: { 2024: {}, 2025: { 0: 63000 }, 2026: {} } },
   { id: 21, name: 'BPK. GIRO', block: 'CB01', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000 }, 2026: {} } },
   { id: 22, name: 'BPK. HILMAN', block: 'CA14', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000 }, 2026: {} } },
-  // CENDRAWASIH
   { id: 23, name: 'IBU DEDE SUYETI', block: 'CB12', defaultAmount: 72000, payments: { 2024: {}, 2025: { 0: 72000 }, 2026: {} } },
   { id: 24, name: 'BPK. ERVAN', block: 'CB15', defaultAmount: 74000, payments: { 2024: {}, 2025: { 0: 74000 }, 2026: {} } },
   { id: 25, name: 'IBU MELI', block: 'CB14', defaultAmount: 70000, payments: { 2024: {}, 2025: { 0: 70000 }, 2026: {} } },
@@ -74,7 +72,6 @@ const INITIAL_RESIDENTS = [
   { id: 36, name: 'BPK. ARIS', block: 'CC8', defaultAmount: 61000, payments: { 2024: {}, 2025: { 0: 61000 }, 2026: {} } },
   { id: 37, name: 'BPK. AGUS CIK', block: 'CC8A', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000 }, 2026: {} } },
   { id: 38, name: 'BPK. TEGUH', block: 'CC9', defaultAmount: 60000, payments: { 2024: {}, 2025: { 0: 60000 }, 2026: {} } },
-  // KENARI
   { id: 39, name: 'BPK. ENDI', block: 'CC12', defaultAmount: 63000, payments: { 2024: {}, 2025: { 0: 63000 }, 2026: {} } },
   { id: 40, name: 'BPK. ASEP', block: 'CC14', defaultAmount: 60000, payments: { 2024: {}, 2025: { 0: 60000 }, 2026: {} } },
   { id: 41, name: 'BPK. PRIYO', block: 'CC16', defaultAmount: 66000, payments: { 2024: {}, 2025: { 0: 66000 }, 2026: {} } },
@@ -89,7 +86,6 @@ const INITIAL_RESIDENTS = [
   { id: 50, name: 'BPK. ALBAR', block: 'CD6', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 'LUNAS' }, 2026: {} } },
   { id: 51, name: 'BPK. ESMANSYAH', block: 'CD7', defaultAmount: 63000, payments: { 2024: {}, 2025: { 0: 63000 }, 2026: {} } },
   { id: 52, name: 'BPK. FERI', block: 'CD8', defaultAmount: 63000, payments: { 2024: {}, 2025: { 0: 63000 }, 2026: {} } },
-  // MURAI MERAK
   { id: 53, name: 'BPK. AJID', block: 'CD9', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 'LUNAS' }, 2026: {} } },
   { id: 54, name: 'BPK. WAHYUDI', block: 'CD10', defaultAmount: 61000, payments: { 2024: {}, 2025: { 0: 61000 }, 2026: {} } },
   { id: 55, name: 'BPK. HENDRIK', block: 'CD12', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000 }, 2026: {} } },
@@ -106,7 +102,8 @@ const INITIAL_RESIDENTS = [
 
 const INITIAL_RESIDENTS_FILLED = INITIAL_RESIDENTS.map(r => {
   const fullYear = { 0: r.defaultAmount, 1: r.defaultAmount, 2: r.defaultAmount, 3: r.defaultAmount, 4: r.defaultAmount, 5: r.defaultAmount, 6: r.defaultAmount, 7: r.defaultAmount, 8: r.defaultAmount, 9: r.defaultAmount, 10: r.defaultAmount, 11: r.defaultAmount };
-  return { ...r, payments: { ...r.payments, 2024: fullYear, 2025: fullYear } };
+  const q1_2026 = { 0: r.defaultAmount, 1: r.defaultAmount, 2: r.defaultAmount };
+  return { ...r, payments: { ...r.payments, 2024: fullYear, 2025: fullYear, 2026: q1_2026 } };
 });
 
 const INITIAL_TRANSACTIONS = [
@@ -156,7 +153,6 @@ const YEARS = [2024, 2025, 2026];
 export default function App() {
   const [user, setUser] = useState(null);
   const [dbLoading, setDbLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false);
 
   const [userRole, setUserRole] = useState('GUEST');
   const [showPinModal, setShowPinModal] = useState(false);
@@ -175,6 +171,11 @@ export default function App() {
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const [searchIuran, setSearchIuran] = useState('');
+  const [selectedYearIuran, setSelectedYearIuran] = useState(2026);
+  const [searchThr, setSearchThr] = useState('');
+  const [selectedYearThr, setSelectedYearThr] = useState(2026);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -251,7 +252,7 @@ export default function App() {
     for (let m = 0; m < 12; m++) {
       let totalIuranBulanIni = 0;
       residents.forEach(res => {
-        const pay = res.payments[2025] ? res.payments[2025][m] : undefined;
+        const pay = res.payments[2026] ? res.payments[2026][m] : undefined;
         if (pay === 'LUNAS') totalIuranBulanIni += (res.defaultAmount * 12); 
         else if (typeof pay === 'number') totalIuranBulanIni += pay;
       });
@@ -303,7 +304,6 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 font-sans flex justify-center">
         <div className="w-full max-w-md bg-slate-50 min-h-screen relative shadow-2xl overflow-hidden flex flex-col items-center justify-center p-6">
-          {/* BACKGROUND LOGO BLUR */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 z-0">
             <img src="/logo-bogor.png" alt="" className="w-[150%] max-w-none blur-sm" />
           </div>
@@ -337,7 +337,6 @@ export default function App() {
             </div>
           )}
           
-          {/* IDENTITAS CRAFTED BY */}
           <div className="absolute bottom-6 left-0 right-0 text-center z-10">
              <p className="text-[10px] text-slate-400 font-bold tracking-widest">crafted by ivan rahman</p>
           </div>
@@ -478,15 +477,30 @@ export default function App() {
   };
 
   const IuranView = () => {
-    const [search, setSearch] = useState('');
-    const [selectedYear, setSelectedYear] = useState(2025); 
-    const togglePaymentGrid = (residentId, m) => { if (userRole !== 'PENGURUS') return; const newResidents = residents.map(r => { if (r.id === residentId) { const newPayments = { ...r.payments }; if (!newPayments[selectedYear]) newPayments[selectedYear] = {}; if (Object.values(newPayments[selectedYear]).includes('LUNAS')) { for(let i=0; i<12; i++) newPayments[selectedYear][i] = r.defaultAmount; } if (newPayments[selectedYear][m]) delete newPayments[selectedYear][m]; else newPayments[selectedYear][m] = r.defaultAmount; return { ...r, payments: newPayments }; } return r; }); setResidents(newResidents); saveToDatabase('residents', newResidents); };
-    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.block.toLowerCase().includes(search.toLowerCase()) );
+    const togglePaymentGrid = (residentId, m) => { 
+      if (userRole !== 'PENGURUS') return; 
+      const newResidents = residents.map(r => { 
+        if (r.id === residentId) { 
+          const newPayments = { ...r.payments }; 
+          if (!newPayments[selectedYearIuran]) newPayments[selectedYearIuran] = {}; 
+          if (Object.values(newPayments[selectedYearIuran]).includes('LUNAS')) { 
+            for(let i=0; i<12; i++) newPayments[selectedYearIuran][i] = r.defaultAmount; 
+          } 
+          if (newPayments[selectedYearIuran][m]) delete newPayments[selectedYearIuran][m]; 
+          else newPayments[selectedYearIuran][m] = r.defaultAmount; 
+          return { ...r, payments: newPayments }; 
+        } 
+        return r; 
+      }); 
+      setResidents(newResidents); 
+      saveToDatabase('residents', newResidents); 
+    };
+    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchIuran.toLowerCase()) || r.block.toLowerCase().includes(searchIuran.toLowerCase()) );
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
         <div className="flex items-center justify-between shrink-0">
           <div><h2 className="text-lg font-bold text-slate-800">Pencatatan Iuran</h2><p className="text-xs text-slate-500">Pilih tahun riwayat.</p></div>
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg focus:ring-green-500 block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
+          <select value={selectedYearIuran} onChange={(e) => setSelectedYearIuran(Number(e.target.value))} className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg focus:ring-green-500 block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
         </div>
         <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 shrink-0">
           <h3 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1"><Info className="w-4 h-4"/> Rincian Iuran Bulanan (Pokok: Rp 58.000)</h3>
@@ -494,13 +508,31 @@ export default function App() {
         </div>
         <div className="relative shrink-0">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div>
-          <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchIuran} onChange={(e) => setSearchIuran(e.target.value)} />
         </div>
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
           <div className="overflow-auto flex-1">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 text-slate-600"><tr><th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-sm whitespace-nowrap">Nama Warga</th>{MONTHS.map((m, i) => (<th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-sm">{m.slice(0,3)}</th>))}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{filteredWarga.map((warga) => (<tr key={warga.id} className="hover:bg-slate-50 transition"><td className="sticky left-0 bg-white p-3 z-10 shadow-sm flex flex-col whitespace-nowrap"><span className="font-semibold text-slate-800">{warga.name}</span><span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span></td>{MONTHS.map((m, i) => { const paymentsYear = warga.payments[selectedYear] || {}; const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS'); return (<td key={i} className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`} onClick={() => togglePaymentGrid(warga.id, i)}><div className="flex justify-center items-center h-full">{isPaid ? (<CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />) : (<Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />)}</div></td>);})}</tr>))}</tbody>
+              <tbody className="divide-y divide-slate-100">{filteredWarga.map((warga) => (<tr key={warga.id} className="hover:bg-slate-50 transition"><td className="sticky left-0 bg-white p-3 z-10 shadow-sm flex flex-col whitespace-nowrap"><span className="font-semibold text-slate-800">{warga.name}</span><span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span></td>{MONTHS.map((m, i) => { const paymentsYear = warga.payments[selectedYearIuran] || {}; const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS'); return (<td key={i} className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`} onClick={() => togglePaymentGrid(warga.id, i)}><div className="flex justify-center items-center h-full">{isPaid ? (<CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />) : (<Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />)}</div></td>);})}</tr>))}</tbody>
+              <tfoot className="bg-green-50 font-semibold relative z-20">
+                <tr>
+                  <td className="sticky bottom-0 left-0 bg-green-100 p-3 z-30 shadow-sm text-green-800 text-[11px] whitespace-nowrap">Total Terkumpul</td>
+                  {MONTHS.map((_, i) => {
+                    const totalMth = filteredWarga.reduce((sum, r) => {
+                      const paymentsYear = r.payments[selectedYearIuran] || {};
+                      const isLunas = Object.values(paymentsYear).includes('LUNAS');
+                      const val = isLunas ? r.defaultAmount : (paymentsYear[i] || 0);
+                      return sum + val;
+                    }, 0);
+                    return (
+                      <td key={i} className="sticky bottom-0 z-20 bg-green-50 p-2 text-center border-l border-green-100 text-[10px] text-green-700 whitespace-nowrap shadow-sm">
+                        {totalMth > 0 ? (totalMth / 1000).toLocaleString('id-ID') + 'K' : '-'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -509,21 +541,30 @@ export default function App() {
   };
 
   const ThrView = () => {
-    const [search, setSearch] = useState('');
-    const [selectedYear, setSelectedYear] = useState(2025); 
-    const toggleThrPayment = (residentId) => { if (userRole !== 'PENGURUS') return; const newResidents = residents.map(r => { if (r.id === residentId) { const currentThr = r.thrPayments || {}; return { ...r, thrPayments: { ...currentThr, [selectedYear]: !currentThr[selectedYear] } }; } return r; }); setResidents(newResidents); saveToDatabase('residents', newResidents); };
-    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.block.toLowerCase().includes(search.toLowerCase()));
+    const toggleThrPayment = (residentId) => { 
+      if (userRole !== 'PENGURUS') return; 
+      const newResidents = residents.map(r => { 
+        if (r.id === residentId) { 
+          const currentThr = r.thrPayments || {}; 
+          return { ...r, thrPayments: { ...currentThr, [selectedYearThr]: !currentThr[selectedYearThr] } }; 
+        } 
+        return r; 
+      }); 
+      setResidents(newResidents); 
+      saveToDatabase('residents', newResidents); 
+    };
+    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchThr.toLowerCase()) || r.block.toLowerCase().includes(searchThr.toLowerCase()));
     const thrNominal = 50000;
-    const totalTerkumpul = filteredWarga.reduce((sum, r) => sum + (r.thrPayments?.[selectedYear] ? thrNominal : 0), 0);
+    const totalTerkumpul = filteredWarga.reduce((sum, r) => sum + (r.thrPayments?.[selectedYearThr] ? thrNominal : 0), 0);
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
-        <div className="flex items-center justify-between shrink-0"><div><h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2><p className="text-xs text-yellow-600">Rp 50.000 / Warga</p></div> <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select></div>
+        <div className="flex items-center justify-between shrink-0"><div><h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2><p className="text-xs text-yellow-600">Rp 50.000 / Warga</p></div> <select value={selectedYearThr} onChange={(e) => setSelectedYearThr(Number(e.target.value))} className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select></div>
         <div className="bg-yellow-100 p-4 rounded-xl border border-yellow-200 flex justify-between items-center shrink-0"><span className="text-sm font-bold text-yellow-800">Total Terkumpul:</span><span className="text-lg font-extrabold text-yellow-700">{formatRp(totalTerkumpul)}</span></div>
-        <div className="relative shrink-0"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div><input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-yellow-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+        <div className="relative shrink-0"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div><input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-yellow-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchThr} onChange={(e) => setSearchThr(e.target.value)} /></div>
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
           <div className="overflow-auto flex-1">
             <div className="divide-y divide-slate-100">
-              {filteredWarga.map((warga) => { const isPaid = warga.thrPayments?.[selectedYear]; return (<div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'} ${userRole === 'PENGURUS' ? 'cursor-pointer' : 'cursor-default'}`} onClick={() => toggleThrPayment(warga.id)}> <div><div className="font-semibold text-slate-800 text-sm">{warga.name}</div><div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div></div> <div className="flex items-center gap-3"> {isPaid ? (<span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">LUNAS</span>) : (<span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>)} <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> </div> </div>)})}
+              {filteredWarga.map((warga) => { const isPaid = warga.thrPayments?.[selectedYearThr]; return (<div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'} ${userRole === 'PENGURUS' ? 'cursor-pointer' : 'cursor-default'}`} onClick={() => toggleThrPayment(warga.id)}> <div><div className="font-semibold text-slate-800 text-sm">{warga.name}</div><div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div></div> <div className="flex items-center gap-3"> {isPaid ? (<span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">LUNAS</span>) : (<span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>)} <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> </div> </div>)})}
             </div>
           </div>
         </div>
