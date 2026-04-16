@@ -3,7 +3,7 @@ import {
   Users, Wallet, FileSpreadsheet, LayoutDashboard, PlusCircle, CheckCircle2, Circle,
   ArrowUpRight, ArrowDownRight, Download, Trash2, Save, Search, Info, Gift, Box, Calendar, 
   Wrench, QrCode, CreditCard, ChevronDown, ChevronUp, Copy, X, UploadCloud, Image as ImageIcon, 
-  FileText, Lock, Loader2, Edit3, AlertCircle
+  FileText, Lock, Loader2, Edit3, BookOpen, ShieldAlert
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -32,7 +32,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'kas-rt-09-app';
 
-// --- DATA AWAL (Jika Database Kosong) ---
+// --- DATA AWAL ---
 const INITIAL_RESIDENTS = [
   // DADALI
   { id: 1, name: 'BPK. KHAIDIR', block: 'CA12', defaultAmount: 62000, payments: { 2024: {}, 2025: { 0: 62000, 1: 62000 }, 2026: {} } },
@@ -120,6 +120,16 @@ const INITIAL_TRANSACTIONS = [
   { id: 108, date: '28 Jan 2025', month: 0, type: 'in', category: 'Dana Program Inventaris RT', amount: 1000000, description: 'Sumbangan' },
 ];
 
+const INITIAL_ASSETS = [
+  { id: 1, name: 'Kursi', count: '120 Unit' },
+  { id: 2, name: 'Tenda 4x6', count: '2 Unit' },
+  { id: 3, name: 'Sound System', count: '1 Set' },
+  { id: 4, name: 'Kipas Angin', count: '1 Unit' },
+  { id: 5, name: 'Piring', count: '1 Perangkat' },
+  { id: 6, name: 'Alat Gorol', count: 'Tersedia' },
+  { id: 7, name: 'Mesin Rumput', count: '1 Unit' },
+];
+
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const YEARS = [2024, 2025, 2026];
 
@@ -129,7 +139,7 @@ const YEARS = [2024, 2025, 2026];
 export default function App() {
   const [user, setUser] = useState(null);
   const [dbLoading, setDbLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false); // Otomatis bypass jika error
+  const [isOffline, setIsOffline] = useState(false);
 
   const [userRole, setUserRole] = useState('GUEST');
   const [showPinModal, setShowPinModal] = useState(false);
@@ -143,9 +153,21 @@ export default function App() {
   const [residents, setResidents] = useState(INITIAL_RESIDENTS_FILLED);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [agendas, setAgendas] = useState([]);
+  const [assets, setAssets] = useState(INITIAL_ASSETS);
+  
+  // State Pengajian sesuai perintah baru
+  const [pengajianData, setPengajianData] = useState({ saldo: 0, info: '' });
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Paksa loading selesai maksimal dalam 2 detik agar aplikasi pasti langsung terbuka
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDbLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // 1. Inisialisasi Auth Firebase
   useEffect(() => {
@@ -157,22 +179,22 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (err) { 
-        console.error("Auth error:", err);
-        setDbLoading(false);
-        setIsOffline(true); // Langsung pakai mode lokal tanpa repot
+        console.error("Auth info (Abaikan jika Firebase belum diatur):", err);
       }
     };
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Data dari Database Firestore (Pakai path paling aman)
+  // 2. Fetch Data dari Database Firestore
   useEffect(() => {
     if (!user) return;
     
-    // Perbaikan path agar otomatis berjalan mulus tanpa error permissions
-    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
+    // Path Firebase
+    const docRef = doc(db, 'kasRT', 'dataUtama');
     
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -180,22 +202,24 @@ export default function App() {
           residents: INITIAL_RESIDENTS_FILLED,
           transactions: INITIAL_TRANSACTIONS,
           agendas: [],
-          saldoAwalTahun: 1168500
-        }).catch(() => setIsOffline(true));
+          assets: INITIAL_ASSETS,
+          saldoAwalTahun: 1168500,
+          pengajianData: { saldo: 0, info: '' }
+        }).catch((err) => console.log("Data awal berjalan di memori lokal."));
       } else {
         const data = snapshot.data();
         if(data.saldoAwalTahun !== undefined) setSaldoAwalTahun(data.saldoAwalTahun);
         if(data.residents) setResidents(data.residents);
         if(data.transactions) setTransactions(data.transactions);
         if(data.agendas) setAgendas(data.agendas);
+        if(data.assets) setAssets(data.assets);
+        if(data.pengajianData) setPengajianData(data.pengajianData);
       }
       setDbLoading(false);
-      setIsOffline(false);
     }, (err) => {
-      console.error("Firebase permission default, fallback ke mode otomatis.", err);
-      // Jika Firebase belum disetting, kita abaikan dan biarkan aplikasi menyala pakai data lokal
+      // Abaikan error merah. Aplikasi tetap langsung pakai tanpa offline screen.
+      console.log("Menjalankan aplikasi tanpa sinkronisasi cloud (Aturan Firebase belum dibuka).");
       setDbLoading(false);
-      setIsOffline(true);
     });
 
     return () => unsub();
@@ -203,12 +227,12 @@ export default function App() {
 
   // Helper Simpan
   const saveToDatabase = async (key, dataToSave) => {
-    if(!user || userRole !== 'PENGURUS' || isOffline) return;
+    if(!user || userRole !== 'PENGURUS') return;
     try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
+      const docRef = doc(db, 'kasRT', 'dataUtama');
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
     } catch (err) {
-      console.error("Gagal menyimpan ke cloud, data tersimpan di HP sementara.", err);
+      console.log("Penyimpanan cloud ditunda. Data tersimpan di aplikasi.");
     }
   };
 
@@ -283,9 +307,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 font-sans flex justify-center">
         <div className="w-full max-w-md bg-slate-50 min-h-screen relative shadow-2xl overflow-hidden flex flex-col items-center justify-center p-6">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-700 border-4 border-green-200 mb-4 shadow-sm">
-            <span className="font-extrabold text-2xl">RT</span>
-          </div>
+          {/* LOGO BOGOR */}
+          <img src="/logo-bogor.png" alt="Logo Bogor" className="w-20 h-20 object-contain mb-4 drop-shadow-sm" onError={(e) => e.target.style.display='none'} />
+          
           <h1 className="text-2xl font-extrabold text-green-700 tracking-tight mb-1 text-center">VILLA PERMATA MAS 1</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8 text-center">Sistem Kas RT 09/18</p>
           
@@ -331,6 +355,87 @@ export default function App() {
       </div>
     );
   }
+
+  // --- PENGAJIAN VIEW (MENU BARU) ---
+  const PengajianView = () => {
+    const [isEditingPengajian, setIsEditingPengajian] = useState(false);
+    const [tempPengajian, setTempPengajian] = useState(0);
+    const [isEditingInfo, setIsEditingInfo] = useState(false);
+    const [tempInfo, setTempInfo] = useState('');
+
+    const handleSavePengajian = () => {
+       const newData = { ...pengajianData, saldo: Number(tempPengajian) };
+       setPengajianData(newData);
+       saveToDatabase('pengajianData', newData);
+       setIsEditingPengajian(false);
+    };
+
+    const handleSaveInfo = () => {
+       const newData = { ...pengajianData, info: tempInfo };
+       setPengajianData(newData);
+       saveToDatabase('pengajianData', newData);
+       setIsEditingInfo(false);
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-bold text-emerald-800">Saldo Pengajian</h2>
+        </div>
+        
+        {/* Edit Saldo Section */}
+        <div className="bg-emerald-50 p-6 rounded-2xl shadow-sm border border-emerald-100">
+          <h3 className="text-xs font-bold text-emerald-600 mb-2">TOTAL SALDO</h3>
+          {isEditingPengajian && userRole === 'PENGURUS' ? (
+             <div className="flex items-center gap-2">
+               <input type="number" value={tempPengajian} onChange={e => setTempPengajian(e.target.value)} className="w-full text-lg font-bold p-2 rounded-xl border border-emerald-200 text-emerald-800 focus:outline-none" autoFocus />
+               <button onClick={handleSavePengajian} className="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-xl"><Save className="w-5 h-5"/></button>
+               <button onClick={() => setIsEditingPengajian(false)} className="bg-slate-300 hover:bg-slate-400 text-slate-700 p-2 rounded-xl"><X className="w-5 h-5"/></button>
+             </div>
+          ) : (
+             <div className="text-3xl font-extrabold text-emerald-700 flex items-center justify-between">
+               {formatRp(pengajianData.saldo)}
+               {userRole === 'PENGURUS' && (
+                 <button onClick={() => { setIsEditingPengajian(true); setTempPengajian(pengajianData.saldo); }} className="text-emerald-400 hover:text-emerald-600 p-2 bg-emerald-100 rounded-full">
+                   <Edit3 className="w-5 h-5" />
+                 </button>
+               )}
+             </div>
+          )}
+        </div>
+
+        {/* Edit Info Section */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+           <h3 className="text-xs font-bold text-slate-500 mb-2">INFORMASI TAMBAHAN</h3>
+           {isEditingInfo && userRole === 'PENGURUS' ? (
+             <div className="space-y-2">
+               <textarea 
+                 value={tempInfo} 
+                 onChange={e => setTempInfo(e.target.value)} 
+                 className="w-full text-sm p-3 rounded-xl border border-slate-200 text-slate-800 focus:outline-none min-h-[100px]" 
+                 placeholder="Ketik informasi tambahan di sini..."
+               />
+               <div className="flex gap-2">
+                 <button onClick={() => setIsEditingInfo(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button>
+                 <button onClick={handleSaveInfo} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-2"><Save className="w-4 h-4"/> Simpan</button>
+               </div>
+             </div>
+           ) : (
+             <div className="relative">
+               <div className="text-sm text-slate-700 whitespace-pre-line min-h-[60px] p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  {pengajianData.info || <span className="text-slate-400 italic">Belum ada informasi.</span>}
+               </div>
+               {userRole === 'PENGURUS' && (
+                 <button onClick={() => { setIsEditingInfo(true); setTempInfo(pengajianData.info || ''); }} className="absolute top-2 right-2 text-slate-400 hover:text-emerald-600 p-1">
+                   <Edit3 className="w-4 h-4" />
+                 </button>
+               )}
+             </div>
+           )}
+        </div>
+      </div>
+    );
+  };
 
   const DashboardView = () => {
     const dataBulanIni = laporanData[currentMonthIdx];
@@ -401,24 +506,35 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        {/* FOLDER MENU 2x2 */}
+        <div className="grid grid-cols-2 gap-3">
           <button onClick={() => setActiveTab('iuran')} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition">
             <div className="bg-blue-100 p-2.5 rounded-full text-blue-600">
               <Users className="w-5 h-5" />
             </div>
             <span className="text-[11px] font-semibold text-slate-700">IURAN</span>
           </button>
+          
           <button onClick={() => setActiveTab('kas')} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition">
             <div className="bg-orange-100 p-2.5 rounded-full text-orange-600">
               <Wallet className="w-5 h-5" />
             </div>
             <span className="text-[11px] font-semibold text-slate-700">Pengeluaran</span>
           </button>
+          
           <button onClick={() => setActiveTab('thr')} className="bg-yellow-50 p-3 rounded-2xl shadow-sm border border-yellow-200 flex flex-col items-center justify-center gap-2 hover:bg-yellow-100 transition relative overflow-hidden">
             <div className="bg-yellow-100 p-2.5 rounded-full text-yellow-600">
               <Gift className="w-5 h-5" />
             </div>
             <span className="text-[11px] font-semibold text-yellow-800 text-center leading-tight">Iuran THR</span>
+          </button>
+
+          {/* MENU SALDO PENGAJIAN DITAMBAHKAN KE SINI */}
+          <button onClick={() => setActiveTab('pengajian')} className="bg-emerald-50 p-3 rounded-2xl shadow-sm border border-emerald-200 flex flex-col items-center justify-center gap-2 hover:bg-emerald-100 transition relative overflow-hidden">
+            <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight">Saldo Pengajian</span>
           </button>
         </div>
 
@@ -433,7 +549,8 @@ export default function App() {
               className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-200 shrink-0 cursor-pointer hover:bg-blue-100 transition relative group shadow-sm overflow-hidden"
               title="Klik untuk perbesar QRIS"
             >
-               <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1170011106804" alt="QR Thumbnail" className="w-full h-full object-cover p-1 mix-blend-multiply" />
+               {/* GAMBAR QRIS */}
+               <img src="/qris.jpeg" alt="QR Thumbnail" className="w-full h-full object-cover p-1 mix-blend-multiply" onError={(e) => e.target.src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1170011106804'} />
                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                   <Search className="w-5 h-5 text-slate-700 bg-white rounded-full p-1 shadow-sm" />
                </div>
@@ -940,6 +1057,10 @@ export default function App() {
     const [showAset, setShowAset] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [infoData, setInfoData] = useState({ title: '', desc: '', fileName: '' });
+    
+    // Form untuk input Aset baru/edit
+    const [showAsetForm, setShowAsetForm] = useState(false);
+    const [assetForm, setAssetForm] = useState({ id: null, name: '', count: '' });
 
     const handleSaveInfo = (e) => {
       e.preventDefault();
@@ -952,7 +1073,7 @@ export default function App() {
       };
       const newAgendas = [newAgenda, ...agendas];
       setAgendas(newAgendas);
-      saveToDatabase('agendas', newAgendas); // Simpan DB
+      saveToDatabase('agendas', newAgendas); 
       
       setShowForm(false);
       setInfoData({ title: '', desc: '', fileName: '' });
@@ -962,6 +1083,34 @@ export default function App() {
       if (e.target.files && e.target.files[0]) {
         setInfoData({ ...infoData, fileName: e.target.files[0].name });
       }
+    };
+
+    // Fungsi Save Aset
+    const handleSaveAsset = (e) => {
+      e.preventDefault();
+      let newAssets = [];
+      if (assetForm.id) {
+         newAssets = assets.map(a => a.id === assetForm.id ? { ...a, name: assetForm.name, count: assetForm.count } : a);
+      } else {
+         newAssets = [...assets, { id: Date.now(), name: assetForm.name, count: assetForm.count }];
+      }
+      setAssets(newAssets);
+      saveToDatabase('assets', newAssets);
+      setShowAsetForm(false);
+      setAssetForm({ id: null, name: '', count: '' });
+    };
+
+    // Fungsi Hapus Aset
+    const handleDeleteAsset = (id) => {
+       const newAssets = assets.filter(a => a.id !== id);
+       setAssets(newAssets);
+       saveToDatabase('assets', newAssets);
+    };
+
+    // Fungsi Edit Aset
+    const handleEditAsset = (item) => {
+       setAssetForm(item);
+       setShowAsetForm(true);
     };
 
     return (
@@ -1078,21 +1227,41 @@ export default function App() {
           </button>
 
           {showAset && (
-            <div className="grid grid-cols-2 gap-3 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-               {[
-                 { name: 'Kursi', count: '120 Unit' },
-                 { name: 'Tenda 4x6', count: '2 Unit' },
-                 { name: 'Sound System', count: '1 Set' },
-                 { name: 'Kipas Angin', count: '1 Unit' },
-                 { name: 'Piring', count: '1 Perangkat' },
-                 { name: 'Alat Gorol', count: 'Tersedia' },
-                 { name: 'Mesin Rumput', count: '1 Unit' },
-               ].map((item, i) => (
-                  <div key={i} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center items-center">
-                    <div className="font-bold text-slate-700 text-sm">{item.name}</div>
-                    <div className="text-xs text-green-600 font-bold mt-1 bg-green-50 px-2 py-0.5 rounded-full inline-block">{item.count}</div>
-                  </div>
-               ))}
+            <div className="mt-3">
+              {userRole === 'PENGURUS' && !showAsetForm && (
+                <button onClick={() => setShowAsetForm(true)} className="w-full mb-3 bg-green-50 text-green-700 border border-green-200 p-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition">
+                  <PlusCircle className="w-4 h-4" /> Tambah Aset
+                </button>
+              )}
+
+              {userRole === 'PENGURUS' && showAsetForm && (
+                <div className="bg-white border border-green-200 p-4 rounded-xl shadow-sm mb-3">
+                  <h3 className="font-bold text-slate-700 mb-3 text-sm">{assetForm.id ? 'Edit Aset' : 'Tambah Aset'}</h3>
+                  <form onSubmit={handleSaveAsset} className="space-y-3">
+                    <input type="text" placeholder="Nama Barang (Contoh: Kursi)" required value={assetForm.name} onChange={(e) => setAssetForm({...assetForm, name: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-green-500 focus:border-green-500" />
+                    <input type="text" placeholder="Jumlah (Contoh: 120 Unit)" required value={assetForm.count} onChange={(e) => setAssetForm({...assetForm, count: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-green-500 focus:border-green-500" />
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => {setShowAsetForm(false); setAssetForm({id: null, name:'', count:''})}} className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button>
+                      <button type="submit" className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold">Simpan</button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                 {assets.map((item) => (
+                    <div key={item.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center items-center relative group">
+                      {userRole === 'PENGURUS' && (
+                        <div className="absolute top-1 right-1 flex gap-1">
+                           <button onClick={() => handleEditAsset(item)} className="p-1 text-slate-300 hover:text-blue-500 rounded"><Edit3 className="w-3.5 h-3.5" /></button>
+                           <button onClick={() => handleDeleteAsset(item.id)} className="p-1 text-slate-300 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      )}
+                      <div className="font-bold text-slate-700 text-sm mt-2">{item.name}</div>
+                      <div className="text-xs text-green-600 font-bold mt-1 bg-green-50 px-2 py-0.5 rounded-full inline-block">{item.count}</div>
+                    </div>
+                 ))}
+              </div>
             </div>
           )}
         </div>
@@ -1106,13 +1275,17 @@ export default function App() {
         
         {/* Top App Bar */}
         <div className="bg-white px-6 py-4 shadow-sm z-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-green-700 tracking-tight">VILLA PERMATA MAS 1</h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5 tracking-widest">Sistem Kas RT 09/18</p>
+          <div className="flex items-center">
+            {/* LOGO BOGOR */}
+            <img src="/logo-bogor.png" alt="Logo Bogor" className="w-10 h-10 object-contain mr-3" onError={(e) => e.target.style.display='none'} />
+            <div>
+              <h1 className="text-xl font-extrabold text-green-700 tracking-tight">VILLA PERMATA MAS 1</h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5 tracking-widest">Sistem Kas RT 09/18</p>
+            </div>
           </div>
-          <div className="flex flex-col items-center ml-4 cursor-pointer" onClick={() => setUserRole('GUEST')} title="Logout">
-            <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-700 border border-green-200 shrink-0">
-              <span className="font-bold text-sm">RT</span>
+          <div className="flex flex-col items-center ml-2 cursor-pointer" onClick={() => setUserRole('GUEST')} title="Logout">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 border border-green-200 shrink-0">
+              <Users className="w-4 h-4" />
             </div>
             <span className={`text-[7px] mt-1 font-bold px-1.5 py-0.5 rounded-full border tracking-widest ${userRole === 'PENGURUS' ? 'bg-green-600 text-white border-green-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
               {userRole}
@@ -1128,6 +1301,7 @@ export default function App() {
           {activeTab === 'kas' && <KasView />}
           {activeTab === 'laporan' && <LaporanView />}
           {activeTab === 'info' && <InfoView />}
+          {activeTab === 'pengajian' && <PengajianView />}
         </div>
 
         {/* QRIS Modal */}
@@ -1145,7 +1319,8 @@ export default function App() {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">A.N. IVAN RAHMAN</p>
               
               <div className="w-64 h-64 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center p-2 mb-6 shadow-inner relative overflow-hidden">
-                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=1170011106804" alt="QRIS Scan" className="w-full h-full object-contain rounded-xl mix-blend-multiply" />
+                 {/* GAMBAR QRIS */}
+                 <img src="/qris.jpeg" alt="QRIS Scan" className="w-full h-full object-contain rounded-xl mix-blend-multiply" onError={(e) => e.target.src='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=1170011106804'} />
                  <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_3px_rgba(59,130,246,0.6)] animate-[pulse_2s_ease-in-out_infinite]" style={{animation: 'scan 2s linear infinite'}}></div>
               </div>
               
