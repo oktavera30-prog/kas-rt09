@@ -117,35 +117,10 @@ const INITIAL_TRANSACTIONS = [
   { id: 108, date: '28 Jan 2025', month: 0, type: 'in', category: 'Dana Program Inventaris RT', amount: 1000000, description: 'Sumbangan' },
 ];
 
-const INITIAL_ASSETS = [
-  { id: 1, name: 'Iuran Januari 2024', count: '64' },
-  { id: 2, name: 'Iuran Februari 2024', count: '64' },
-  { id: 3, name: 'Iuran Maret 2024', count: '64' },
-  { id: 4, name: 'Iuran April 2024', count: '64' },
-  { id: 5, name: 'Iuran Mei 2024', count: '64' },
-  { id: 6, name: 'Iuran Juni 2024', count: '64' },
-  { id: 7, name: 'Iuran Juli 2024', count: '64' },
-  { id: 8, name: 'Iuran Agustus 2024', count: '64' },
-  { id: 9, name: 'Iuran September 2024', count: '64' },
-  { id: 10, name: 'Iuran Oktober 2024', count: '64' },
-  { id: 11, name: 'Iuran November 2024', count: '64' },
-  { id: 12, name: 'Iuran Desember 2024', count: '64' },
-  { id: 13, name: 'Iuran Januari 2025', count: '64' },
-  { id: 14, name: 'Iuran Februari 2025', count: '64' },
-  { id: 15, name: 'Iuran Maret 2025', count: '64' },
-  { id: 16, name: 'Iuran April 2025', count: '64' },
-  { id: 17, name: 'Iuran Mei 2025', count: '64' },
-  { id: 18, name: 'Iuran Juni 2025', count: '64' },
-  { id: 19, name: 'Iuran Juli 2025', count: '64' },
-  { id: 20, name: 'Iuran Agustus 2025', count: '64' },
-  { id: 21, name: 'Iuran September 2025', count: '64' },
-  { id: 22, name: 'Iuran Oktober 2025', count: '64' },
-  { id: 23, name: 'Iuran November 2025', count: '64' },
-  { id: 24, name: 'Iuran Desember 2025', count: '64' }
-];
-
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-const YEARS = [2024, 2025, 2026];
+
+// Diubah agar tahun pilihan menyesuaikan terus ke masa depan (2024 s/d 2030)
+const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
 // =====================================================================
 // KOMPONEN UTAMA APLIKASI KAS RT
@@ -166,16 +141,19 @@ export default function App() {
   const [residents, setResidents] = useState(INITIAL_RESIDENTS_FILLED);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [agendas, setAgendas] = useState([]);
-  const [assets, setAssets] = useState(INITIAL_ASSETS);
+  const [assets, setAssets] = useState([]); // Aset disesuaikan default kosong seperti sebelumnya
   const [pengajianData, setPengajianData] = useState({ saldo: 0, info: '' });
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // State tahun otomatis mengikuti tahun berjalan di kalender (misal: 2026, nanti 2027 dst)
+  const currentYearAuto = new Date().getFullYear();
   const [searchIuran, setSearchIuran] = useState('');
-  const [selectedYearIuran, setSelectedYearIuran] = useState(2026);
+  const [selectedYearIuran, setSelectedYearIuran] = useState(currentYearAuto);
   const [searchThr, setSearchThr] = useState('');
-  const [selectedYearThr, setSelectedYearThr] = useState(2026);
+  const [selectedYearThr, setSelectedYearThr] = useState(currentYearAuto);
+  const [selectedYearLaporan, setSelectedYearLaporan] = useState(currentYearAuto);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -212,7 +190,7 @@ export default function App() {
           residents: INITIAL_RESIDENTS_FILLED,
           transactions: INITIAL_TRANSACTIONS,
           agendas: [],
-          assets: INITIAL_ASSETS,
+          assets: [],
           saldoAwalTahun: 1168500,
           pengajianData: { saldo: 0, info: '' }
         }).catch((err) => console.log("Lokal mode aktif."));
@@ -252,11 +230,19 @@ export default function App() {
     for (let m = 0; m < 12; m++) {
       let totalIuranBulanIni = 0;
       residents.forEach(res => {
-        const pay = res.payments[2026] ? res.payments[2026][m] : undefined;
+        // Hanya menghitung iuran berdasarkan tahun yang sedang dipilih di Laporan
+        const pay = res.payments[selectedYearLaporan] ? res.payments[selectedYearLaporan][m] : undefined;
         if (pay === 'LUNAS') totalIuranBulanIni += (res.defaultAmount * 12); 
         else if (typeof pay === 'number') totalIuranBulanIni += pay;
       });
-      const transBulanIni = transactions.filter(t => t.month === m);
+      
+      // Filter transaksi agar hanya yang sesuai tahun laporan yang ditarik
+      const transBulanIni = transactions.filter(t => {
+        if (t.month !== m) return false;
+        if (!t.date) return true;
+        return t.date.includes(selectedYearLaporan.toString());
+      });
+
       const penerimaanLain = transBulanIni.filter(t => t.type === 'in').reduce((sum, t) => sum + t.amount, 0);
       const totalPenerimaan = totalIuranBulanIni + penerimaanLain;
       const filterPengeluaran = (kategori) => transBulanIni.filter(t => t.type === 'out' && t.category === kategori).reduce((sum, t) => sum + t.amount, 0);
@@ -289,7 +275,7 @@ export default function App() {
       saldoBulanSebelumnya = saldoAkhir;
     }
     return laporan;
-  }, [residents, transactions, saldoAwalTahun]);
+  }, [residents, transactions, saldoAwalTahun, selectedYearLaporan]);
 
   if (dbLoading) {
     return (
@@ -619,8 +605,11 @@ export default function App() {
     return (
       <div className="space-y-4 pb-12">
         <div className="flex items-center justify-between mb-4">
-          <div><h2 className="text-lg font-bold text-slate-800">Laporan Kas RT 09/18</h2><p className="text-xs text-slate-500">Rekap 1 Tahun (Geser ke kanan)</p></div>
-          <button className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200" title="Cetak Laporan"><Download className="w-5 h-5" /></button>
+          <div><h2 className="text-lg font-bold text-slate-800">Laporan Kas RT 09/18</h2><p className="text-xs text-slate-500">Rekap Tahun {selectedYearLaporan} (Geser kanan)</p></div>
+          <div className="flex items-center gap-2">
+            <select value={selectedYearLaporan} onChange={(e) => setSelectedYearLaporan(Number(e.target.value))} className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
+            <button className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200" title="Cetak Laporan"><Download className="w-5 h-5" /></button>
+          </div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
