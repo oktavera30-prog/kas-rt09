@@ -141,13 +141,13 @@ export default function App() {
   const [residents, setResidents] = useState(INITIAL_RESIDENTS_FILLED);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [agendas, setAgendas] = useState([]);
-  const [assets, setAssets] = useState([]); // Aset disesuaikan default kosong seperti sebelumnya
+  const [assets, setAssets] = useState([]); 
   const [pengajianData, setPengajianData] = useState({ saldo: 0, info: '' });
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // State tahun otomatis mengikuti tahun berjalan di kalender (misal: 2026, nanti 2027 dst)
+  // State tahun otomatis mengikuti tahun berjalan di kalender
   const currentYearAuto = new Date().getFullYear();
   const [searchIuran, setSearchIuran] = useState('');
   const [selectedYearIuran, setSelectedYearIuran] = useState(currentYearAuto);
@@ -182,7 +182,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    // FIX: Membuang syarat (if !user return;) agar aplikasi tidak memblokir akses database Bapak
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -208,10 +208,11 @@ export default function App() {
       setDbLoading(false);
     });
     return () => unsub();
-  }, [user]);
+  }, []); // FIX: Menghapus dependency user
 
   const saveToDatabase = async (key, dataToSave) => {
-    if(!user || userRole !== 'PENGURUS') return;
+    // FIX: Hanya mengecek apakah sedang login PENGURUS, tidak perlu ngecek user Firebase 
+    if(userRole !== 'PENGURUS') return; 
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
@@ -230,13 +231,11 @@ export default function App() {
     for (let m = 0; m < 12; m++) {
       let totalIuranBulanIni = 0;
       residents.forEach(res => {
-        // Hanya menghitung iuran berdasarkan tahun yang sedang dipilih di Laporan
         const pay = res.payments[selectedYearLaporan] ? res.payments[selectedYearLaporan][m] : undefined;
         if (pay === 'LUNAS') totalIuranBulanIni += (res.defaultAmount * 12); 
         else if (typeof pay === 'number') totalIuranBulanIni += pay;
       });
       
-      // Filter transaksi agar hanya yang sesuai tahun laporan yang ditarik
       const transBulanIni = transactions.filter(t => {
         if (t.month !== m) return false;
         if (!t.date) return true;
@@ -468,12 +467,14 @@ export default function App() {
       const newResidents = residents.map(r => { 
         if (r.id === residentId) { 
           const newPayments = { ...r.payments }; 
-          if (!newPayments[selectedYearIuran]) newPayments[selectedYearIuran] = {}; 
-          if (Object.values(newPayments[selectedYearIuran]).includes('LUNAS')) { 
-            for(let i=0; i<12; i++) newPayments[selectedYearIuran][i] = r.defaultAmount; 
+          // FIX: Clone the object to prevent shallow state mutation bugs
+          const yearPayments = { ...(newPayments[selectedYearIuran] || {}) };
+          if (Object.values(yearPayments).includes('LUNAS')) { 
+            for(let i=0; i<12; i++) yearPayments[i] = r.defaultAmount; 
           } 
-          if (newPayments[selectedYearIuran][m]) delete newPayments[selectedYearIuran][m]; 
-          else newPayments[selectedYearIuran][m] = r.defaultAmount; 
+          if (yearPayments[m]) delete yearPayments[m]; 
+          else yearPayments[m] = r.defaultAmount; 
+          newPayments[selectedYearIuran] = yearPayments;
           return { ...r, payments: newPayments }; 
         } 
         return r; 
@@ -593,7 +594,7 @@ export default function App() {
           <div className="p-3 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">Riwayat Bulan {MONTHS[selectedMth]}</div>
           <div className="divide-y divide-slate-100">
             {currentTrans.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm">Belum ada transaksi.</div>) : (
-              currentTrans.map((t) => (<div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition"> <div className="flex-1"> <div className="flex items-center gap-2"> {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />} <span className="font-semibold text-sm text-slate-800">{t.category}</span> </div> <div className="flex items-center gap-1 mt-1 ml-6 text-xs"> <span className="font-medium text-slate-500">{t.date || '-'}</span> {t.description && <span className="text-slate-400">• {t.description}</span>} </div> </div> <div className="text-right flex items-center gap-4"> <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>{t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}</span> {userRole === 'PENGURUS' && (<div className="flex items-center gap-1"><button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button></div>)} </div> </div>))
+              currentTrans.map((t) => (<div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition"> <div className="flex-1"> <div className="flex items-center gap-2"> {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />} <span className="font-semibold text-sm text-slate-800">{t.category}</span> </div> <div className="flex items-center gap-1 mt-1 ml-6 text-xs"> <span className="font-medium text-slate-500">{t.date || '-'}</span> {t.description && <span className="text-slate-400">• {t.description}</span>} </div> </div> <div className="text-right flex items-center gap-4"> <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>{t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}</span> {userRole === 'PENGURUS' && (<div className="flex items-center gap-1"><button onClick={() => handleEdit(t)} className="text-slate-300 hover:text-blue-500 p-1"><Edit3 className="w-4 h-4" /></button><button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button></div>)} </div> </div>))
             )}
           </div>
         </div>
