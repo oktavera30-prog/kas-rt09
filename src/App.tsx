@@ -121,13 +121,30 @@ const INITIAL_TRANSACTIONS = [
 ];
 
 const INITIAL_ASSETS = [
-  { id: 1, name: 'Kursi', count: '120 Unit' },
-  { id: 2, name: 'Tenda 4x6', count: '2 Unit' },
-  { id: 3, name: 'Sound System', count: '1 Set' },
-  { id: 4, name: 'Kipas Angin', count: '1 Unit' },
-  { id: 5, name: 'Piring', count: '1 Perangkat' },
-  { id: 6, name: 'Alat Gorol', count: 'Tersedia' },
-  { id: 7, name: 'Mesin Rumput', count: '1 Unit' },
+  { id: 1, name: 'Iuran Januari 2024', count: '64' },
+  { id: 2, name: 'Iuran Februari 2024', count: '64' },
+  { id: 3, name: 'Iuran Maret 2024', count: '64' },
+  { id: 4, name: 'Iuran April 2024', count: '64' },
+  { id: 5, name: 'Iuran Mei 2024', count: '64' },
+  { id: 6, name: 'Iuran Juni 2024', count: '64' },
+  { id: 7, name: 'Iuran Juli 2024', count: '64' },
+  { id: 8, name: 'Iuran Agustus 2024', count: '64' },
+  { id: 9, name: 'Iuran September 2024', count: '64' },
+  { id: 10, name: 'Iuran Oktober 2024', count: '64' },
+  { id: 11, name: 'Iuran November 2024', count: '64' },
+  { id: 12, name: 'Iuran Desember 2024', count: '64' },
+  { id: 13, name: 'Iuran Januari 2025', count: '64' },
+  { id: 14, name: 'Iuran Februari 2025', count: '64' },
+  { id: 15, name: 'Iuran Maret 2025', count: '64' },
+  { id: 16, name: 'Iuran April 2025', count: '64' },
+  { id: 17, name: 'Iuran Mei 2025', count: '64' },
+  { id: 18, name: 'Iuran Juni 2025', count: '64' },
+  { id: 19, name: 'Iuran Juli 2025', count: '64' },
+  { id: 20, name: 'Iuran Agustus 2025', count: '64' },
+  { id: 21, name: 'Iuran September 2025', count: '64' },
+  { id: 22, name: 'Iuran Oktober 2025', count: '64' },
+  { id: 23, name: 'Iuran November 2025', count: '64' },
+  { id: 24, name: 'Iuran Desember 2025', count: '64' }
 ];
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -154,14 +171,11 @@ export default function App() {
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [agendas, setAgendas] = useState([]);
   const [assets, setAssets] = useState(INITIAL_ASSETS);
-  
-  // State Pengajian sesuai perintah baru
   const [pengajianData, setPengajianData] = useState({ saldo: 0, info: '' });
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Paksa loading selesai maksimal dalam 2 detik agar aplikasi pasti langsung terbuka
   useEffect(() => {
     const timer = setTimeout(() => {
       setDbLoading(false);
@@ -169,7 +183,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 1. Inisialisasi Auth Firebase
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -179,7 +192,7 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (err) { 
-        console.error("Auth info (Abaikan jika Firebase belum diatur):", err);
+        console.error("Auth info:", err);
       }
     };
     initAuth();
@@ -189,13 +202,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Data dari Database Firestore
   useEffect(() => {
     if (!user) return;
-    
-    // Perbaikan path agar otomatis berjalan mulus tanpa error permissions di lingkungan Canvas / Preview
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
-    
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) {
         setDoc(docRef, {
@@ -205,7 +214,7 @@ export default function App() {
           assets: INITIAL_ASSETS,
           saldoAwalTahun: 1168500,
           pengajianData: { saldo: 0, info: '' }
-        }).catch((err) => console.log("Data awal berjalan di memori lokal."));
+        }).catch((err) => console.log("Lokal mode aktif."));
       } else {
         const data = snapshot.data();
         if(data.saldoAwalTahun !== undefined) setSaldoAwalTahun(data.saldoAwalTahun);
@@ -217,22 +226,18 @@ export default function App() {
       }
       setDbLoading(false);
     }, (err) => {
-      // Abaikan error merah. Aplikasi tetap langsung pakai tanpa offline screen.
-      console.log("Menjalankan aplikasi tanpa sinkronisasi cloud (Aturan Firebase belum dibuka).");
       setDbLoading(false);
     });
-
     return () => unsub();
   }, [user]);
 
-  // Helper Simpan
   const saveToDatabase = async (key, dataToSave) => {
     if(!user || userRole !== 'PENGURUS') return;
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
     } catch (err) {
-      console.log("Penyimpanan cloud ditunda. Data tersimpan di aplikasi.");
+      console.log("Sinkronisasi cloud ditunda.");
     }
   };
 
@@ -240,11 +245,9 @@ export default function App() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
   };
 
-  // --- LOGIKA PERHITUNGAN LAPORAN ---
   const laporanData = useMemo(() => {
     let laporan = [];
     let saldoBulanSebelumnya = saldoAwalTahun;
-
     for (let m = 0; m < 12; m++) {
       let totalIuranBulanIni = 0;
       residents.forEach(res => {
@@ -252,13 +255,10 @@ export default function App() {
         if (pay === 'LUNAS') totalIuranBulanIni += (res.defaultAmount * 12); 
         else if (typeof pay === 'number') totalIuranBulanIni += pay;
       });
-
       const transBulanIni = transactions.filter(t => t.month === m);
       const penerimaanLain = transBulanIni.filter(t => t.type === 'in').reduce((sum, t) => sum + t.amount, 0);
       const totalPenerimaan = totalIuranBulanIni + penerimaanLain;
-
       const filterPengeluaran = (kategori) => transBulanIni.filter(t => t.type === 'out' && t.category === kategori).reduce((sum, t) => sum + t.amount, 0);
-      
       const rutin = {
         keamanan: filterPengeluaran('Gaji Petugas Keamanan'),
         kebersihan: filterPengeluaran('Gaji Petugas Kebersihan'),
@@ -268,7 +268,6 @@ export default function App() {
         adminBank: filterPengeluaran('Admin BANK'),
       };
       const totalRutin = Object.values(rutin).reduce((a, b) => a + b, 0);
-
       const tidakRutin = {
         thr: filterPengeluaran('THR'),
         perbaikan: filterPengeluaran('Perbaikan/Perawatan'),
@@ -278,17 +277,14 @@ export default function App() {
         gorong: filterPengeluaran('Gorol /jasa kebersihan'),
       };
       const totalTidakRutin = Object.values(tidakRutin).reduce((a, b) => a + b, 0);
-
       const surplusDefisit = totalPenerimaan - totalRutin - totalTidakRutin;
       const saldoAkhir = saldoBulanSebelumnya + surplusDefisit;
-
       laporan.push({
         monthName: MONTHS[m],
         saldoAwal: saldoBulanSebelumnya,
         penerimaan: { iuran: totalIuranBulanIni, lain: penerimaanLain, total: totalPenerimaan },
         rutin, totalRutin, tidakRutin, totalTidakRutin, surplusDefisit, saldoAkhir
       });
-
       saldoBulanSebelumnya = saldoAkhir;
     }
     return laporan;
@@ -307,13 +303,17 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 font-sans flex justify-center">
         <div className="w-full max-w-md bg-slate-50 min-h-screen relative shadow-2xl overflow-hidden flex flex-col items-center justify-center p-6">
-          {/* LOGO BOGOR */}
-          <img src="/logo-bogor.png" alt="Logo Bogor" className="w-20 h-20 object-contain mb-4 drop-shadow-sm" onError={(e) => e.target.style.display='none'} />
+          {/* BACKGROUND LOGO BLUR */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 z-0">
+            <img src="/logo-bogor.png" alt="" className="w-[150%] max-w-none blur-sm" />
+          </div>
+
+          <img src="/logo-bogor.png" alt="Logo Bogor" className="w-20 h-20 object-contain mb-4 drop-shadow-sm z-10" onError={(e) => e.target.style.display='none'} />
           
-          <h1 className="text-2xl font-extrabold text-green-700 tracking-tight mb-1 text-center">VILLA PERMATA MAS 1</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8 text-center">Sistem Kas RT 09/18</p>
+          <h1 className="text-2xl font-extrabold text-green-700 tracking-tight mb-1 text-center z-10">VILLA PERMATA MAS 1</h1>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8 text-center z-10">Sistem Kas RT 09/18</p>
           
-          <div className="w-full bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+          <div className="w-full bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4 z-10">
              <h2 className="text-sm font-bold text-slate-700 mb-4 text-center">Pilih Mode Akses:</h2>
              
              <button onClick={() => setUserRole('WARGA')} className="w-full py-3.5 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 transition flex items-center justify-center gap-3 shadow-sm">
@@ -326,66 +326,39 @@ export default function App() {
           </div>
 
           {showPinModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm z-20">
               <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-xs relative animate-in fade-in zoom-in duration-200">
                 <button onClick={() => {setShowPinModal(false); setPin(''); setPinError(false);}} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700"><X className="w-5 h-5"/></button>
                 <h3 className="font-bold text-slate-800 mb-4 text-center">PIN Pengurus</h3>
-                <input 
-                  type="password" 
-                  maxLength={6}
-                  autoFocus
-                  value={pin}
-                  onChange={(e) => {setPin(e.target.value); setPinError(false);}}
-                  placeholder="******"
-                  className={`w-full text-center text-2xl tracking-[0.5em] font-bold p-3 border rounded-xl focus:ring-green-500 focus:border-green-500 mb-2 ${pinError ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-300'}`}
-                />
+                <input type="password" maxLength={6} autoFocus value={pin} onChange={(e) => {setPin(e.target.value); setPinError(false);}} placeholder="******" className={`w-full text-center text-2xl tracking-[0.5em] font-bold p-3 border rounded-xl focus:ring-green-500 focus:border-green-500 mb-2 ${pinError ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-300'}`} />
                 {pinError && <p className="text-xs text-red-500 text-center font-semibold mb-3">PIN Salah! Coba lagi.</p>}
-                <button 
-                  onClick={() => {
-                    if (pin === '123456') { setUserRole('PENGURUS'); setShowPinModal(false); setPinError(false); }
-                    else { setPinError(true); }
-                  }}
-                  className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 mt-2 shadow-md"
-                >Lanjutkan</button>
-                <p className="text-[10px] text-slate-400 text-center mt-3">*Gunakan PIN: 123456</p>
+                <button onClick={() => { if (pin === '123123') { setUserRole('PENGURUS'); setShowPinModal(false); setPinError(false); } else { setPinError(true); } }} className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 mt-2 shadow-md">Lanjutkan</button>
               </div>
             </div>
           )}
+          
+          {/* IDENTITAS CRAFTED BY */}
+          <div className="absolute bottom-6 left-0 right-0 text-center z-10">
+             <p className="text-[10px] text-slate-400 font-bold tracking-widest">crafted by ivan rahman</p>
+          </div>
+
         </div>
       </div>
     );
   }
 
-  // --- PENGAJIAN VIEW (MENU BARU) ---
   const PengajianView = () => {
     const [isEditingPengajian, setIsEditingPengajian] = useState(false);
     const [tempPengajian, setTempPengajian] = useState(0);
     const [isEditingInfo, setIsEditingInfo] = useState(false);
     const [tempInfo, setTempInfo] = useState('');
-
-    const handleSavePengajian = () => {
-       const newData = { ...pengajianData, saldo: Number(tempPengajian) };
-       setPengajianData(newData);
-       saveToDatabase('pengajianData', newData);
-       setIsEditingPengajian(false);
-    };
-
-    const handleSaveInfo = () => {
-       const newData = { ...pengajianData, info: tempInfo };
-       setPengajianData(newData);
-       saveToDatabase('pengajianData', newData);
-       setIsEditingInfo(false);
-    };
-
+    const handleSavePengajian = () => { const newData = { ...pengajianData, saldo: Number(tempPengajian) }; setPengajianData(newData); saveToDatabase('pengajianData', newData); setIsEditingPengajian(false); };
+    const handleSaveInfo = () => { const newData = { ...pengajianData, info: tempInfo }; setPengajianData(newData); saveToDatabase('pengajianData', newData); setIsEditingInfo(false); };
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-bold text-emerald-800">Saldo Pengajian</h2>
-        </div>
-        
-        {/* Edit Saldo Section */}
+      <div className="space-y-4 pb-12">
+        <h2 className="text-lg font-bold text-emerald-800">Saldo Pengajian</h2>
         <div className="bg-emerald-50 p-6 rounded-2xl shadow-sm border border-emerald-100">
-          <h3 className="text-xs font-bold text-emerald-600 mb-2">TOTAL SALDO</h3>
+          <h3 className="text-xs font-bold text-emerald-600 mb-2 uppercase">Total Saldo</h3>
           {isEditingPengajian && userRole === 'PENGURUS' ? (
              <div className="flex items-center gap-2">
                <input type="number" value={tempPengajian} onChange={e => setTempPengajian(e.target.value)} className="w-full text-lg font-bold p-2 rounded-xl border border-emerald-200 text-emerald-800 focus:outline-none" autoFocus />
@@ -396,25 +369,16 @@ export default function App() {
              <div className="text-3xl font-extrabold text-emerald-700 flex items-center justify-between">
                {formatRp(pengajianData.saldo)}
                {userRole === 'PENGURUS' && (
-                 <button onClick={() => { setIsEditingPengajian(true); setTempPengajian(pengajianData.saldo); }} className="text-emerald-400 hover:text-emerald-600 p-2 bg-emerald-100 rounded-full">
-                   <Edit3 className="w-5 h-5" />
-                 </button>
+                 <button onClick={() => { setIsEditingPengajian(true); setTempPengajian(pengajianData.saldo); }} className="text-emerald-400 hover:text-emerald-600 p-2 bg-emerald-100 rounded-full"><Edit3 className="w-5 h-5" /></button>
                )}
              </div>
           )}
         </div>
-
-        {/* Edit Info Section */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-           <h3 className="text-xs font-bold text-slate-500 mb-2">INFORMASI TAMBAHAN</h3>
+           <h3 className="text-xs font-bold text-slate-500 mb-2 uppercase">Input Informasi Manual</h3>
            {isEditingInfo && userRole === 'PENGURUS' ? (
              <div className="space-y-2">
-               <textarea 
-                 value={tempInfo} 
-                 onChange={e => setTempInfo(e.target.value)} 
-                 className="w-full text-sm p-3 rounded-xl border border-slate-200 text-slate-800 focus:outline-none min-h-[100px]" 
-                 placeholder="Ketik informasi tambahan di sini..."
-               />
+               <textarea value={tempInfo} onChange={e => setTempInfo(e.target.value)} className="w-full text-sm p-3 rounded-xl border border-slate-200 text-slate-800 focus:outline-none min-h-[100px]" placeholder="Ketik informasi manual di sini..." />
                <div className="flex gap-2">
                  <button onClick={() => setIsEditingInfo(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button>
                  <button onClick={handleSaveInfo} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-2"><Save className="w-4 h-4"/> Simpan</button>
@@ -423,12 +387,10 @@ export default function App() {
            ) : (
              <div className="relative">
                <div className="text-sm text-slate-700 whitespace-pre-line min-h-[60px] p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  {pengajianData.info || <span className="text-slate-400 italic">Belum ada informasi.</span>}
+                  {pengajianData.info || <span className="text-slate-400 italic">Klik ikon pensil untuk tambah informasi...</span>}
                </div>
                {userRole === 'PENGURUS' && (
-                 <button onClick={() => { setIsEditingInfo(true); setTempInfo(pengajianData.info || ''); }} className="absolute top-2 right-2 text-slate-400 hover:text-emerald-600 p-1">
-                   <Edit3 className="w-4 h-4" />
-                 </button>
+                 <button onClick={() => { setIsEditingInfo(true); setTempInfo(pengajianData.info || ''); }} className="absolute top-2 right-2 text-slate-400 hover:text-emerald-600 p-1"><Edit3 className="w-4 h-4" /></button>
                )}
              </div>
            )}
@@ -441,34 +403,13 @@ export default function App() {
     const dataBulanIni = laporanData[currentMonthIdx];
     const [isEditingSaldo, setIsEditingSaldo] = useState(false);
     const [tempSaldo, setTempSaldo] = useState(0);
-
-    const handleSaveSaldo = () => {
-      const targetSaldo = Number(tempSaldo) || 0;
-      const sumSurplus = dataBulanIni.saldoAkhir - saldoAwalTahun;
-      const newSaldoAwalTahun = targetSaldo - sumSurplus;
-      
-      setSaldoAwalTahun(newSaldoAwalTahun);
-      saveToDatabase('saldoAwalTahun', newSaldoAwalTahun);
-      setIsEditingSaldo(false);
-    };
-
-    const handleCopy = () => {
-      const textField = document.createElement('textarea');
-      textField.innerText = '1170011106804';
-      document.body.appendChild(textField);
-      textField.select();
-      document.execCommand('copy');
-      textField.remove();
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
-
+    const handleSaveSaldo = () => { const targetSaldo = Number(tempSaldo) || 0; const sumSurplus = dataBulanIni.saldoAkhir - saldoAwalTahun; const newSaldoAwalTahun = targetSaldo - sumSurplus; setSaldoAwalTahun(newSaldoAwalTahun); saveToDatabase('saldoAwalTahun', newSaldoAwalTahun); setIsEditingSaldo(false); };
+    const handleCopy = () => { const textField = document.createElement('textarea'); textField.innerText = '1170011106804'; document.body.appendChild(textField); textField.select(); document.execCommand('copy'); textField.remove(); setCopied(true); setTimeout(() => setCopied(false), 2000); };
     return (
       <div className="space-y-4">
         <div className="bg-gradient-to-br from-green-600 to-emerald-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
           {userRole === 'WARGA' && <div className="absolute top-0 right-0 bg-white/20 text-[10px] px-3 py-1 rounded-bl-xl font-bold">MODE: HANYA LIHAT</div>}
           <h2 className="text-sm font-medium text-green-100 mb-1">Saldo Akhir Kas RT (Bulan {MONTHS[currentMonthIdx]})</h2>
-          
           {isEditingSaldo && userRole === 'PENGURUS' ? (
             <div className="mb-4 bg-white/10 p-3 rounded-lg border border-green-400/30">
               <label className="text-xs text-green-100 block mb-1">Sesuaikan Saldo Kas Saat Ini (Rp):</label>
@@ -477,95 +418,56 @@ export default function App() {
                 <button onClick={handleSaveSaldo} className="bg-green-500 hover:bg-green-400 text-white p-1.5 rounded transition"><Save className="w-5 h-5"/></button>
                 <button onClick={() => setIsEditingSaldo(false)} className="bg-red-500 hover:bg-red-400 text-white p-1.5 rounded transition"><X className="w-5 h-5"/></button>
               </div>
-              <p className="text-[9px] text-green-200 mt-1">*Sistem akan menyesuaikan seluruh laporan secara otomatis.</p>
             </div>
           ) : (
             <div className="text-3xl font-bold mb-4 flex items-center gap-3">
               {formatRp(dataBulanIni.saldoAkhir)}
               {userRole === 'PENGURUS' && (
-                <button onClick={() => { setIsEditingSaldo(true); setTempSaldo(dataBulanIni.saldoAkhir); }} className="text-green-200 hover:text-white p-1.5 bg-white/10 rounded-full transition" title="Edit Saldo">
-                  <Edit3 className="w-4 h-4" />
-                </button>
+                <button onClick={() => { setIsEditingSaldo(true); setTempSaldo(dataBulanIni.saldoAkhir); }} className="text-green-200 hover:text-white p-1.5 bg-white/10 rounded-full transition" title="Edit Saldo"><Edit3 className="w-4 h-4" /></button>
               )}
             </div>
           )}
-
           <div className="grid grid-cols-2 gap-4 mt-6 border-t border-white/20 pt-4">
             <div>
-              <div className="flex items-center text-green-100 text-xs mb-1">
-                <ArrowUpRight className="w-4 h-4 mr-1" /> Pemasukan Bln Ini
-              </div>
+              <div className="flex items-center text-green-100 text-xs mb-1"><ArrowUpRight className="w-4 h-4 mr-1" /> Pemasukan Bln Ini</div>
               <div className="font-semibold">{formatRp(dataBulanIni.penerimaan.total)}</div>
             </div>
             <div>
-              <div className="flex items-center text-red-200 text-xs mb-1">
-                <ArrowDownRight className="w-4 h-4 mr-1" /> Pengeluaran Bln Ini
-              </div>
+              <div className="flex items-center text-red-200 text-xs mb-1"><ArrowDownRight className="w-4 h-4 mr-1" /> Pengeluaran Bln Ini</div>
               <div className="font-semibold">{formatRp(dataBulanIni.totalRutin + dataBulanIni.totalTidakRutin)}</div>
             </div>
           </div>
         </div>
-
-        {/* FOLDER MENU 2x2 */}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={() => setActiveTab('iuran')} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition">
-            <div className="bg-blue-100 p-2.5 rounded-full text-blue-600">
-              <Users className="w-5 h-5" />
-            </div>
+            <div className="bg-blue-100 p-2.5 rounded-full text-blue-600"><Users className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-slate-700">IURAN</span>
           </button>
-          
           <button onClick={() => setActiveTab('kas')} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition">
-            <div className="bg-orange-100 p-2.5 rounded-full text-orange-600">
-              <Wallet className="w-5 h-5" />
-            </div>
+            <div className="bg-orange-100 p-2.5 rounded-full text-orange-600"><Wallet className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-slate-700">Pengeluaran</span>
           </button>
-          
           <button onClick={() => setActiveTab('thr')} className="bg-yellow-50 p-3 rounded-2xl shadow-sm border border-yellow-200 flex flex-col items-center justify-center gap-2 hover:bg-yellow-100 transition relative overflow-hidden">
-            <div className="bg-yellow-100 p-2.5 rounded-full text-yellow-600">
-              <Gift className="w-5 h-5" />
-            </div>
+            <div className="bg-yellow-100 p-2.5 rounded-full text-yellow-600"><Gift className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-yellow-800 text-center leading-tight">Iuran THR</span>
           </button>
-
-          {/* MENU SALDO PENGAJIAN DITAMBAHKAN KE SINI */}
           <button onClick={() => setActiveTab('pengajian')} className="bg-emerald-50 p-3 rounded-2xl shadow-sm border border-emerald-200 flex flex-col items-center justify-center gap-2 hover:bg-emerald-100 transition relative overflow-hidden">
-            <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight">Saldo Pengajian</span>
+            <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600"><BookOpen className="w-5 h-5" /></div>
+            <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight uppercase">Saldo Pengajian</span>
           </button>
         </div>
-
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-slate-600" />
-            Info Rekening & Pembayaran
-          </h3>
+          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-slate-600" /> Info Rekening & Pembayaran</h3>
           <div className="flex items-center gap-4">
-            <div 
-              onClick={() => setShowQrisModal(true)}
-              className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-200 shrink-0 cursor-pointer hover:bg-blue-100 transition relative group shadow-sm overflow-hidden"
-              title="Klik untuk perbesar QRIS"
-            >
-               {/* GAMBAR QRIS */}
-               <img src="/qris.jpeg" alt="QR Thumbnail" className="w-full h-full object-cover p-1 mix-blend-multiply" onError={(e) => e.target.src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1170011106804'} />
-               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                  <Search className="w-5 h-5 text-slate-700 bg-white rounded-full p-1 shadow-sm" />
-               </div>
+            <div onClick={() => setShowQrisModal(true)} className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-200 shrink-0 cursor-pointer hover:bg-blue-100 transition relative group shadow-sm overflow-hidden">
+               <img src="/qris.jpeg" alt="QR" className="w-full h-full object-cover p-1 mix-blend-multiply" onError={(e) => e.target.src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1170011106804'} />
+               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center"><Search className="w-5 h-5 text-slate-700 bg-white rounded-full p-1 shadow-sm" /></div>
             </div>
             <div className="space-y-1 flex-1">
               <p className="text-[11px] text-slate-500 font-medium">Bank Mandiri</p>
               <div className="flex items-center gap-2">
                 <p className="font-bold text-slate-800 tracking-wider text-sm">1170011106804</p>
-                <button 
-                  onClick={handleCopy}
-                  className={`p-1.5 rounded-md transition ${copied ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                  title="Salin Rekening"
-                >
-                  {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
+                <button onClick={handleCopy} className={`p-1.5 rounded-md transition ${copied ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</button>
               </div>
               <p className="text-[10px] text-slate-600 font-bold uppercase mt-0.5">A.N. IVAN RAHMAN</p>
             </div>
@@ -578,136 +480,27 @@ export default function App() {
   const IuranView = () => {
     const [search, setSearch] = useState('');
     const [selectedYear, setSelectedYear] = useState(2025); 
-
-    const togglePaymentGrid = (residentId, m) => {
-      if (userRole !== 'PENGURUS') return; 
-      
-      const newResidents = residents.map(r => {
-        if (r.id === residentId) {
-          const newPayments = { ...r.payments };
-          if (!newPayments[selectedYear]) newPayments[selectedYear] = {}; 
-          
-          if (Object.values(newPayments[selectedYear]).includes('LUNAS')) {
-            for(let i=0; i<12; i++) newPayments[selectedYear][i] = r.defaultAmount;
-          }
-          
-          if (newPayments[selectedYear][m]) delete newPayments[selectedYear][m]; 
-          else newPayments[selectedYear][m] = r.defaultAmount; 
-          
-          return { ...r, payments: newPayments };
-        }
-        return r;
-      });
-
-      setResidents(newResidents);
-      saveToDatabase('residents', newResidents);
-    };
-
-    const filteredWarga = residents.filter(r => 
-      r.name.toLowerCase().includes(search.toLowerCase()) || 
-      r.block.toLowerCase().includes(search.toLowerCase())
-    );
-
+    const togglePaymentGrid = (residentId, m) => { if (userRole !== 'PENGURUS') return; const newResidents = residents.map(r => { if (r.id === residentId) { const newPayments = { ...r.payments }; if (!newPayments[selectedYear]) newPayments[selectedYear] = {}; if (Object.values(newPayments[selectedYear]).includes('LUNAS')) { for(let i=0; i<12; i++) newPayments[selectedYear][i] = r.defaultAmount; } if (newPayments[selectedYear][m]) delete newPayments[selectedYear][m]; else newPayments[selectedYear][m] = r.defaultAmount; return { ...r, payments: newPayments }; } return r; }); setResidents(newResidents); saveToDatabase('residents', newResidents); };
+    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.block.toLowerCase().includes(search.toLowerCase()) );
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
         <div className="flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Pencatatan Iuran</h2>
-            <p className="text-xs text-slate-500">Pilih tahun riwayat.</p>
-          </div>
-          <select 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg focus:ring-green-500 block p-2 shadow-sm"
-          >
-            {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)}
-          </select>
+          <div><h2 className="text-lg font-bold text-slate-800">Pencatatan Iuran</h2><p className="text-xs text-slate-500">Pilih tahun riwayat.</p></div>
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg focus:ring-green-500 block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
         </div>
-
         <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 shrink-0">
           <h3 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1"><Info className="w-4 h-4"/> Rincian Iuran Bulanan (Pokok: Rp 58.000)</h3>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-blue-700">
-            <p>a. Uang Sampah: Rp20.000</p>
-            <p>b. Uang Keamanan: Rp20.000</p>
-            <p>c. Kas RW: Rp1.000</p>
-            <p>d. Kas RT: Rp13.000</p>
-            <p>e. Uang Sosial: Rp3.000</p>
-            <p>f. Posyandu: Rp1.000</p>
-          </div>
-          <p className="text-[9px] text-blue-600 mt-2 italic">*Belum termasuk LSK Rp1.000/Jiwa</p>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-blue-700"> <p>a. Uang Sampah: Rp20.000</p> <p>b. Uang Keamanan: Rp20.000</p> <p>c. Kas RW: Rp1.000</p> <p>d. Kas RT: Rp13.000</p> <p>e. Uang Sosial: Rp3.000</p> <p>f. Posyandu: Rp1.000</p> </div>
         </div>
-
         <div className="relative shrink-0">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="w-4 h-4 text-slate-400" />
-          </div>
-          <input 
-            type="text" 
-            className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" 
-            placeholder="Cari nama warga atau blok..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div>
+          <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
           <div className="overflow-auto flex-1">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-[2px_2px_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">Nama Warga</th>
-                  {MONTHS.map((m, i) => (
-                    <th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-[0_2px_5px_-2px_rgba(0,0,0,0.1)]">{m.slice(0,3)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredWarga.map((warga) => (
-                  <tr key={warga.id} className="hover:bg-slate-50 transition">
-                    <td className="sticky left-0 bg-white p-3 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] flex flex-col whitespace-nowrap">
-                      <span className="font-semibold text-slate-800">{warga.name}</span>
-                      <span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span>
-                    </td>
-                    {MONTHS.map((m, i) => {
-                      const paymentsYear = warga.payments[selectedYear] || {};
-                      const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS');
-                      return (
-                        <td 
-                          key={i} 
-                          className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100 active:bg-slate-200' : 'cursor-default'}`}
-                          onClick={() => togglePaymentGrid(warga.id, i)}
-                        >
-                          <div className="flex justify-center items-center h-full">
-                            {isPaid ? (
-                              <CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />
-                            ) : (
-                              <Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />
-                            )}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-green-50 font-semibold relative z-20">
-                <tr>
-                  <td className="sticky bottom-0 left-0 bg-green-100 p-3 z-30 shadow-[2px_-2px_5px_-2px_rgba(0,0,0,0.1)] text-green-800 text-[11px] whitespace-nowrap">Total Terkumpul</td>
-                  {MONTHS.map((_, i) => {
-                    const totalMth = filteredWarga.reduce((sum, r) => {
-                      const paymentsYear = r.payments[selectedYear] || {};
-                      const isLunas = Object.values(paymentsYear).includes('LUNAS');
-                      const val = isLunas ? r.defaultAmount : (paymentsYear[i] || 0);
-                      return sum + val;
-                    }, 0);
-                    return (
-                      <td key={i} className="sticky bottom-0 z-20 bg-green-50 p-2 text-center border-l border-green-100 text-[10px] text-green-700 whitespace-nowrap shadow-[0_-2px_5px_-2px_rgba(0,0,0,0.1)]">
-                        {totalMth > 0 ? (totalMth / 1000).toLocaleString('id-ID') + 'K' : '-'}
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tfoot>
+              <thead className="bg-slate-50 text-slate-600"><tr><th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-sm whitespace-nowrap">Nama Warga</th>{MONTHS.map((m, i) => (<th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-sm">{m.slice(0,3)}</th>))}</tr></thead>
+              <tbody className="divide-y divide-slate-100">{filteredWarga.map((warga) => (<tr key={warga.id} className="hover:bg-slate-50 transition"><td className="sticky left-0 bg-white p-3 z-10 shadow-sm flex flex-col whitespace-nowrap"><span className="font-semibold text-slate-800">{warga.name}</span><span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span></td>{MONTHS.map((m, i) => { const paymentsYear = warga.payments[selectedYear] || {}; const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS'); return (<td key={i} className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`} onClick={() => togglePaymentGrid(warga.id, i)}><div className="flex justify-center items-center h-full">{isPaid ? (<CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />) : (<Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />)}</div></td>);})}</tr>))}</tbody>
             </table>
           </div>
         </div>
@@ -718,98 +511,19 @@ export default function App() {
   const ThrView = () => {
     const [search, setSearch] = useState('');
     const [selectedYear, setSelectedYear] = useState(2025); 
-
-    const toggleThrPayment = (residentId) => {
-      if (userRole !== 'PENGURUS') return; 
-      
-      const newResidents = residents.map(r => {
-        if (r.id === residentId) {
-          const currentThr = r.thrPayments || {};
-          return { ...r, thrPayments: { ...currentThr, [selectedYear]: !currentThr[selectedYear] } };
-        }
-        return r;
-      });
-      
-      setResidents(newResidents);
-      saveToDatabase('residents', newResidents);
-    };
-
-    const filteredWarga = residents.filter(r => 
-      r.name.toLowerCase().includes(search.toLowerCase()) || 
-      r.block.toLowerCase().includes(search.toLowerCase())
-    );
-
+    const toggleThrPayment = (residentId) => { if (userRole !== 'PENGURUS') return; const newResidents = residents.map(r => { if (r.id === residentId) { const currentThr = r.thrPayments || {}; return { ...r, thrPayments: { ...currentThr, [selectedYear]: !currentThr[selectedYear] } }; } return r; }); setResidents(newResidents); saveToDatabase('residents', newResidents); };
+    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.block.toLowerCase().includes(search.toLowerCase()));
     const thrNominal = 50000;
-    const totalTerkumpul = filteredWarga.reduce((sum, r) => {
-      return sum + (r.thrPayments?.[selectedYear] ? thrNominal : 0);
-    }, 0);
-
+    const totalTerkumpul = filteredWarga.reduce((sum, r) => sum + (r.thrPayments?.[selectedYear] ? thrNominal : 0), 0);
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
-        <div className="flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2>
-            <p className="text-xs text-yellow-600">Rp 50.000 / Warga</p>
-          </div>
-          <select 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg focus:ring-yellow-500 block p-2 shadow-sm"
-          >
-            {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)}
-          </select>
-        </div>
-
-        <div className="bg-yellow-100 p-4 rounded-xl border border-yellow-200 flex justify-between items-center shrink-0">
-          <span className="text-sm font-bold text-yellow-800">Total Terkumpul:</span>
-          <span className="text-lg font-extrabold text-yellow-700">{formatRp(totalTerkumpul)}</span>
-        </div>
-
-        <div className="relative shrink-0">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="w-4 h-4 text-slate-400" />
-          </div>
-          <input 
-            type="text" 
-            className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-yellow-500 block w-full pl-10 p-3" 
-            placeholder="Cari nama warga atau blok..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
+        <div className="flex items-center justify-between shrink-0"><div><h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2><p className="text-xs text-yellow-600">Rp 50.000 / Warga</p></div> <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select></div>
+        <div className="bg-yellow-100 p-4 rounded-xl border border-yellow-200 flex justify-between items-center shrink-0"><span className="text-sm font-bold text-yellow-800">Total Terkumpul:</span><span className="text-lg font-extrabold text-yellow-700">{formatRp(totalTerkumpul)}</span></div>
+        <div className="relative shrink-0"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div><input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-yellow-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
           <div className="overflow-auto flex-1">
             <div className="divide-y divide-slate-100">
-              {filteredWarga.map((warga) => {
-                const isPaid = warga.thrPayments?.[selectedYear];
-                return (
-                  <div 
-                    key={warga.id} 
-                    className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'} ${userRole === 'PENGURUS' ? 'cursor-pointer' : 'cursor-default'}`}
-                    onClick={() => toggleThrPayment(warga.id)}
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-800 text-sm">{warga.name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {isPaid ? (
-                        <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">LUNAS</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>
-                      )}
-                      <div>
-                        {isPaid ? (
-                          <CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />
-                        ) : (
-                          <Circle className="w-7 h-7 text-slate-300" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {filteredWarga.map((warga) => { const isPaid = warga.thrPayments?.[selectedYear]; return (<div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'} ${userRole === 'PENGURUS' ? 'cursor-pointer' : 'cursor-default'}`} onClick={() => toggleThrPayment(warga.id)}> <div><div className="font-semibold text-slate-800 text-sm">{warga.name}</div><div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div></div> <div className="flex items-center gap-3"> {isPaid ? (<span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">LUNAS</span>) : (<span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>)} <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> </div> </div>)})}
             </div>
           </div>
         </div>
@@ -821,151 +535,38 @@ export default function App() {
     const [selectedMth, setSelectedMth] = useState(currentMonthIdx);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    
-    // Form State
     const [tType, setTType] = useState('out');
     const [tCategory, setTCategory] = useState('Gaji Petugas Keamanan');
     const [tAmount, setTAmount] = useState('');
     const [tDesc, setTDesc] = useState('');
-
     const currentTrans = transactions.filter(t => t.month === selectedMth);
-
-    const handleSave = (e) => {
-      e.preventDefault();
-      
-      if (editingId) {
-        const updatedTransactions = transactions.map(t => 
-          t.id === editingId ? { ...t, type: tType, category: tCategory, amount: Number(tAmount), description: tDesc } : t
-        );
-        setTransactions(updatedTransactions);
-        saveToDatabase('transactions', updatedTransactions);
-        setEditingId(null);
-      } else {
-        const today = new Date();
-        const formattedDate = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        
-        const newT = {
-          id: Date.now(),
-          date: formattedDate,
-          month: selectedMth,
-          type: tType,
-          category: tCategory,
-          amount: Number(tAmount),
-          description: tDesc
-        };
-        
-        const newTransactions = [...transactions, newT];
-        setTransactions(newTransactions);
-        saveToDatabase('transactions', newTransactions); // Simpan DB
-      }
-      
-      setShowForm(false);
-      setTAmount(''); setTDesc('');
-    };
-
-    const handleEdit = (t) => {
-      setEditingId(t.id);
-      setTType(t.type);
-      setTCategory(t.category);
-      setTAmount(t.amount.toString());
-      setTDesc(t.description || '');
-      setShowForm(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const deleteTrans = (id) => {
-      if (userRole !== 'PENGURUS') return; 
-      const newTransactions = transactions.filter(t => t.id !== id);
-      setTransactions(newTransactions);
-      saveToDatabase('transactions', newTransactions); // Simpan DB
-    };
-
+    const handleSave = (e) => { e.preventDefault(); if (editingId) { const updatedTransactions = transactions.map(t => t.id === editingId ? { ...t, type: tType, category: tCategory, amount: Number(tAmount), description: tDesc } : t); setTransactions(updatedTransactions); saveToDatabase('transactions', updatedTransactions); setEditingId(null); } else { const today = new Date(); const formattedDate = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); const newT = { id: Date.now(), date: formattedDate, month: selectedMth, type: tType, category: tCategory, amount: Number(tAmount), description: tDesc }; const newTransactions = [...transactions, newT]; setTransactions(newTransactions); saveToDatabase('transactions', newTransactions); } setShowForm(false); setTAmount(''); setTDesc(''); };
+    const deleteTrans = (id) => { const newTransactions = transactions.filter(t => t.id !== id); setTransactions(newTransactions); saveToDatabase('transactions', newTransactions); };
     const categoriesOut = ['Gaji Petugas Keamanan', 'Gaji Petugas Kebersihan', 'Kas RW', 'Iuran Posyandu', 'LSK', 'Admin BANK', 'THR', 'Perbaikan/Perawatan', 'Biaya Rapat/Pertemuan', 'Kegiatan 17 Agustus, Pengajian, dll', 'Dana Sosial', 'Gorol /jasa kebersihan'];
-
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-bold text-slate-800">Buku Kas Operasional</h2>
-          <select 
-            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block p-2"
-            value={selectedMth}
-            onChange={(e) => setSelectedMth(Number(e.target.value))}
-          >
-            {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-          </select>
-        </div>
-
-        {!showForm && userRole === 'PENGURUS' && (
-          <button 
-            onClick={() => { setShowForm(true); setEditingId(null); setTAmount(''); setTDesc(''); setTType('out'); setTCategory('Gaji Petugas Keamanan'); }}
-            className="w-full bg-slate-800 text-white p-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-slate-700 shadow-sm"
-          >
-            <PlusCircle className="w-5 h-5" /> Catat Transaksi Baru
-          </button>
-        )}
-
+        <div className="flex items-center justify-between mb-2"><h2 className="text-lg font-bold text-slate-800">Buku Kas Operasional</h2> <select className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg block p-2" value={selectedMth} onChange={(e) => setSelectedMth(Number(e.target.value))}> {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)} </select></div>
+        {!showForm && userRole === 'PENGURUS' && (<button onClick={() => { setShowForm(true); setEditingId(null); setTAmount(''); setTDesc(''); setTType('out'); setTCategory('Gaji Petugas Keamanan'); }} className="w-full bg-slate-800 text-white p-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-slate-700 shadow-sm"><PlusCircle className="w-5 h-5" /> Catat Transaksi Baru</button>)}
         {showForm && userRole === 'PENGURUS' && (
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-2">
-            <h3 className="font-bold text-slate-700 mb-4 border-b pb-2">{editingId ? 'Edit Transaksi Kas' : 'Transaksi Baru'}</h3>
+            <h3 className="font-bold text-slate-700 mb-4 border-b pb-2">{editingId ? 'Edit Transaksi' : 'Transaksi Baru'}</h3>
             <form onSubmit={handleSave} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setTType('out')} className={`py-2 text-sm font-medium rounded-lg border ${tType==='out' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-500'}`}>Pengeluaran</button>
-                <button type="button" onClick={() => setTType('in')} className={`py-2 text-sm font-medium rounded-lg border ${tType==='in' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-slate-200 text-slate-500'}`}>Pemasukan Lain</button>
+                <button type="button" onClick={() => setTType('out')} className={`py-2 text-sm font-medium rounded-lg border ${tType==='out' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200'}`}>Pengeluaran</button>
+                <button type="button" onClick={() => setTType('in')} className={`py-2 text-sm font-medium rounded-lg border ${tType==='in' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-slate-200'}`}>Pemasukan Lain</button>
               </div>
-              
-              {tType === 'out' && (
-                <select value={tCategory} onChange={(e) => setTCategory(e.target.value)} className="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50">
-                  {categoriesOut.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              )}
-              {tType === 'in' && (
-                <input type="text" value={tCategory} onChange={(e) => setTCategory(e.target.value)} placeholder="Kategori Pemasukan" className="w-full border border-slate-200 rounded-lg text-sm p-3" required />
-              )}
-              
+              {tType === 'out' ? (<select value={tCategory} onChange={(e) => setTCategory(e.target.value)} className="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50">{categoriesOut.map(c => <option key={c} value={c}>{c}</option>)}</select>) : (<input type="text" value={tCategory} onChange={(e) => setTCategory(e.target.value)} placeholder="Kategori Pemasukan" className="w-full border border-slate-200 rounded-lg text-sm p-3" required />)}
               <input type="number" placeholder="Nominal (Rp)" value={tAmount} onChange={(e) => setTAmount(e.target.value)} className="w-full border border-slate-200 rounded-lg text-sm p-3" required />
               <input type="text" placeholder="Keterangan Lengkap (Opsional)" value={tDesc} onChange={(e) => setTDesc(e.target.value)} className="w-full border border-slate-200 rounded-lg text-sm p-3" />
-              
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
-                <button type="submit" className="flex-1 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><Save className="w-4 h-4"/> Simpan</button>
-              </div>
+              <div className="flex gap-2 pt-2"><button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">Batal</button> <button type="submit" className="flex-1 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><Save className="w-4 h-4"/> Simpan</button></div>
             </form>
           </div>
         )}
-
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 mt-4 overflow-hidden">
-          <div className="p-3 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Riwayat Bulan {MONTHS[selectedMth]}
-          </div>
+          <div className="p-3 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">Riwayat Bulan {MONTHS[selectedMth]}</div>
           <div className="divide-y divide-slate-100">
-            {currentTrans.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-sm">Belum ada transaksi pengeluaran/pemasukan lain bulan ini.</div>
-            ) : (
-              currentTrans.map((t) => (
-                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />}
-                      <span className="font-semibold text-sm text-slate-800">{t.category}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 ml-6 text-xs">
-                      <span className="font-medium text-slate-500">{t.date || '-'}</span>
-                      {t.description && <span className="text-slate-400">• {t.description}</span>}
-                    </div>
-                  </div>
-                  <div className="text-right flex items-center gap-4">
-                    <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>
-                      {t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}
-                    </span>
-                    {userRole === 'PENGURUS' && (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => handleEdit(t)} className="text-slate-300 hover:text-blue-500 p-1"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
+            {currentTrans.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm">Belum ada transaksi.</div>) : (
+              currentTrans.map((t) => (<div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition"> <div className="flex-1"> <div className="flex items-center gap-2"> {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />} <span className="font-semibold text-sm text-slate-800">{t.category}</span> </div> <div className="flex items-center gap-1 mt-1 ml-6 text-xs"> <span className="font-medium text-slate-500">{t.date || '-'}</span> {t.description && <span className="text-slate-400">• {t.description}</span>} </div> </div> <div className="text-right flex items-center gap-4"> <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>{t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}</span> {userRole === 'PENGURUS' && (<div className="flex items-center gap-1"><button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button></div>)} </div> </div>))
             )}
           </div>
         </div>
@@ -975,79 +576,43 @@ export default function App() {
 
   const LaporanView = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pb-12">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Laporan Kas RT 09/18</h2>
-            <p className="text-xs text-slate-500">Rekap 1 Tahun (Geser ke kanan)</p>
-          </div>
-          <button className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200" title="Cetak Laporan">
-            <Download className="w-5 h-5" />
-          </button>
+          <div><h2 className="text-lg font-bold text-slate-800">Laporan Kas RT 09/18</h2><p className="text-xs text-slate-500">Rekap 1 Tahun (Geser ke kanan)</p></div>
+          <button className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200" title="Cetak Laporan"><Download className="w-5 h-5" /></button>
         </div>
-
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left text-slate-600">
-              <thead className="bg-slate-100 text-slate-700 uppercase">
-                <tr>
-                  <th className="sticky left-0 bg-slate-100 p-3 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap min-w-[200px]">KETERANGAN</th>
-                  {MONTHS.map((m) => (
-                    <th key={m} className="px-3 py-3 border-b border-slate-200 text-right min-w-[90px]">{m}</th>
-                  ))}
-                </tr>
-              </thead>
+              <thead className="bg-slate-100 text-slate-700 uppercase"><tr><th className="sticky left-0 bg-slate-100 p-3 z-10 shadow-sm whitespace-nowrap min-w-[200px]">KETERANGAN</th>{MONTHS.map((m) => (<th key={m} className="px-3 py-3 border-b border-slate-200 text-right min-w-[90px]">{m}</th>))}</tr></thead>
               <tbody className="whitespace-nowrap">
-                
-                {/* Penerimaan */}
-                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">(II) Penerimaan</td><td colSpan={12}></td></tr>
-                <tr className="border-b border-slate-100">
-                  <td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">1. Iuran Bulanan Warga</td>
-                  {laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.penerimaan.iuran)}</td>)}
-                </tr>
-                <tr className="border-b border-slate-100">
-                  <td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">2. Penerimaan Lain-lain</td>
-                  {laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.penerimaan.lain > 0 ? formatRp(d.penerimaan.lain) : '-'}</td>)}
-                </tr>
-                <tr className="border-b border-slate-200 bg-green-50/30 font-semibold text-green-800">
-                  <td className="sticky left-0 bg-green-50/80 p-2 text-right pr-4 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jumlah (II)</td>
-                  {laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.penerimaan.total)}</td>)}
-                </tr>
-
-                {/* Pengeluaran Rutin */}
-                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">(III) Pengeluaran Rutin</td><td colSpan={12}></td></tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">1. Gaji Petugas Keamanan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.keamanan > 0 ? formatRp(d.rutin.keamanan) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">2. Gaji Petugas Kebersihan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.kebersihan > 0 ? formatRp(d.rutin.kebersihan) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">3. Kas RW</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.kasRW > 0 ? formatRp(d.rutin.kasRW) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">4. Iuran Posyandu</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.posyandu > 0 ? formatRp(d.rutin.posyandu) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">5. LSK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.lsk > 0 ? formatRp(d.rutin.lsk) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">6. Admin BANK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.adminBank > 0 ? formatRp(d.rutin.adminBank) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-200 bg-red-50/50 font-semibold text-red-700">
-                  <td className="sticky left-0 bg-red-50 p-2 text-right pr-4 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jumlah (III)</td>
-                  {laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.totalRutin)}</td>)}
-                </tr>
-
-                {/* Pengeluaran Tidak Rutin */}
-                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">(IV) Pengeluaran Tidak Rutin</td><td colSpan={12}></td></tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">1. THR (Keamanan & Kebersihan)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.thr > 0 ? formatRp(d.tidakRutin.thr) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">2. Perbaikan/Perawatan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.perbaikan > 0 ? formatRp(d.tidakRutin.perbaikan) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">3. Biaya Rapat / Pertemuan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.rapat > 0 ? formatRp(d.tidakRutin.rapat) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">4. Kegiatan 17 Ags, Pengajian</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.kegiatan > 0 ? formatRp(d.tidakRutin.kegiatan) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">5. Dana Sosial</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.sosial > 0 ? formatRp(d.tidakRutin.sosial) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">6. Gorol / Jasa Kebersihan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.gorong > 0 ? formatRp(d.tidakRutin.gorong) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-200 bg-orange-50/50 font-semibold text-orange-700">
-                  <td className="sticky left-0 bg-orange-50 p-2 text-right pr-4 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jumlah (IV)</td>
-                  {laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.totalTidakRutin > 0 ? formatRp(d.totalTidakRutin) : '-'}</td>)}
-                </tr>
-
-                {/* Defisit Surplus */}
-                <tr className="bg-slate-100/80 font-bold border-b border-slate-300">
-                  <td className="sticky left-0 bg-slate-100 p-3 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">(V) (Defisit) / Surplus ( II-III-IV )</td>
-                  {laporanData.map((d, i) => <td key={i} className={`px-3 py-3 text-right ${d.surplusDefisit < 0 ? 'text-red-600' : 'text-slate-700'}`}>{formatRp(d.surplusDefisit)}</td>)}
-                </tr>
+                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-sm">(II) Penerimaan</td><td colSpan={12}></td></tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">1. Iuran Bulanan Warga</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.penerimaan.iuran)}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">2. Penerimaan Lain-lain</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.penerimaan.lain > 0 ? formatRp(d.penerimaan.lain) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-200 bg-green-50 font-semibold text-green-800"><td className="sticky left-0 bg-green-50 p-2 text-right pr-4 z-10 shadow-sm">Jumlah (II)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.penerimaan.total)}</td>)}</tr>
+                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-sm">(III) Pengeluaran Rutin</td><td colSpan={12}></td></tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">1. Gaji Petugas Keamanan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.keamanan > 0 ? formatRp(d.rutin.keamanan) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">2. Gaji Petugas Kebersihan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.kebersihan > 0 ? formatRp(d.rutin.kebersihan) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">3. Kas RW</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.kasRW > 0 ? formatRp(d.rutin.kasRW) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">4. Iuran Posyandu</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.posyandu > 0 ? formatRp(d.rutin.posyandu) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">5. LSK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.lsk > 0 ? formatRp(d.rutin.lsk) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">6. Admin BANK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.adminBank > 0 ? formatRp(d.rutin.adminBank) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-200 bg-red-50 font-semibold text-red-700"><td className="sticky left-0 bg-red-50 p-2 text-right pr-4 z-10 shadow-sm">Jumlah (III)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.totalRutin)}</td>)}</tr>
+                <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-sm">(IV) Pengeluaran Tidak Rutin</td><td colSpan={12}></td></tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">1. THR (Keamanan & Kebersihan)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.thr > 0 ? formatRp(d.tidakRutin.thr) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">2. Perbaikan/Perawatan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.perbaikan > 0 ? formatRp(d.tidakRutin.perbaikan) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">3. Biaya Rapat / Pertemuan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.rapat > 0 ? formatRp(d.tidakRutin.rapat) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">4. Kegiatan 17 Ags, Pengajian</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.kegiatan > 0 ? formatRp(d.tidakRutin.kegiatan) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">5. Dana Sosial</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.sosial > 0 ? formatRp(d.tidakRutin.sosial) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">6. Gorol / Jasa Kebersihan</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.gorong > 0 ? formatRp(d.tidakRutin.gorong) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-200 bg-orange-50 font-semibold text-orange-700"><td className="sticky left-0 bg-orange-50 p-2 text-right pr-4 z-10 shadow-sm">Jumlah (IV)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.totalTidakRutin > 0 ? formatRp(d.totalTidakRutin) : '-'}</td>)}</tr>
+                <tr className="bg-slate-100 font-bold border-b border-slate-300"><td className="sticky left-0 bg-slate-100 p-3 z-10 shadow-sm uppercase">(V) (Defisit) / Surplus</td>{laporanData.map((d, i) => <td key={i} className={`px-3 py-3 text-right ${d.surplusDefisit < 0 ? 'text-red-600' : 'text-slate-700'}`}>{formatRp(d.surplusDefisit)}</td>)}</tr>
               </tbody>
             </table>
           </div>
+        </div>
+        <div className="pt-4 text-center">
+            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">© 2026 Ivan Rahman - VILLA PERMATA MAS 1</p>
         </div>
       </div>
     );
@@ -1057,211 +622,43 @@ export default function App() {
     const [showAset, setShowAset] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [infoData, setInfoData] = useState({ title: '', desc: '', fileName: '' });
-    
-    // Form untuk input Aset baru/edit
     const [showAsetForm, setShowAsetForm] = useState(false);
     const [assetForm, setAssetForm] = useState({ id: null, name: '', count: '' });
-
-    const handleSaveInfo = (e) => {
-      e.preventDefault();
-      const newAgenda = {
-        id: Date.now(),
-        title: infoData.title,
-        desc: infoData.desc,
-        fileName: infoData.fileName,
-        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-      };
-      const newAgendas = [newAgenda, ...agendas];
-      setAgendas(newAgendas);
-      saveToDatabase('agendas', newAgendas); 
-      
-      setShowForm(false);
-      setInfoData({ title: '', desc: '', fileName: '' });
-    };
-
-    const handleFileChange = (e) => {
-      if (e.target.files && e.target.files[0]) {
-        setInfoData({ ...infoData, fileName: e.target.files[0].name });
-      }
-    };
-
-    // Fungsi Save Aset
-    const handleSaveAsset = (e) => {
-      e.preventDefault();
-      let newAssets = [];
-      if (assetForm.id) {
-         newAssets = assets.map(a => a.id === assetForm.id ? { ...a, name: assetForm.name, count: assetForm.count } : a);
-      } else {
-         newAssets = [...assets, { id: Date.now(), name: assetForm.name, count: assetForm.count }];
-      }
-      setAssets(newAssets);
-      saveToDatabase('assets', newAssets);
-      setShowAsetForm(false);
-      setAssetForm({ id: null, name: '', count: '' });
-    };
-
-    // Fungsi Hapus Aset
-    const handleDeleteAsset = (id) => {
-       const newAssets = assets.filter(a => a.id !== id);
-       setAssets(newAssets);
-       saveToDatabase('assets', newAssets);
-    };
-
-    // Fungsi Edit Aset
-    const handleEditAsset = (item) => {
-       setAssetForm(item);
-       setShowAsetForm(true);
-    };
-
+    const handleSaveInfo = (e) => { e.preventDefault(); const newAgenda = { id: Date.now(), title: infoData.title, desc: infoData.desc, fileName: infoData.fileName, date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }; const newAgendas = [newAgenda, ...agendas]; setAgendas(newAgendas); saveToDatabase('agendas', newAgendas); setShowForm(false); setInfoData({ title: '', desc: '', fileName: '' }); };
+    const handleSaveAsset = (e) => { e.preventDefault(); let newAssets = []; if (assetForm.id) { newAssets = assets.map(a => a.id === assetForm.id ? { ...a, name: assetForm.name, count: assetForm.count } : a); } else { newAssets = [...assets, { id: Date.now(), name: assetForm.name, count: assetForm.count }]; } setAssets(newAssets); saveToDatabase('assets', newAssets); setShowAsetForm(false); setAssetForm({ id: null, name: '', count: '' }); };
+    const handleDeleteAsset = (id) => { const newAssets = assets.filter(a => a.id !== id); setAssets(newAssets); saveToDatabase('assets', newAssets); };
     return (
-      <div className="space-y-6 pb-6">
+      <div className="space-y-6 pb-12">
         <div>
           <h2 className="text-lg font-bold text-slate-800 mb-1">Informasi & Kegiatan</h2>
-          <p className="text-xs text-slate-500 mb-3">Bagikan info pengajian, rapat, gorol, dll.</p>
-          
-          {!showForm && userRole === 'PENGURUS' && (
-            <button 
-              onClick={() => setShowForm(true)}
-              className="w-full bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-100 transition shadow-sm mb-4"
-            >
-              <PlusCircle className="w-5 h-5" /> Tulis Informasi Baru
-            </button>
-          )} 
-          
+          {!showForm && userRole === 'PENGURUS' && (<button onClick={() => setShowForm(true)} className="w-full bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm mb-4"><PlusCircle className="w-5 h-5" /> Tulis Informasi Baru</button>)} 
           {showForm && userRole === 'PENGURUS' && (
-            <div className="bg-white border border-blue-200 p-4 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 mb-4">
-              <h3 className="font-bold text-slate-700 mb-3 text-sm">Buat Informasi Baru</h3>
+            <div className="bg-white border border-blue-200 p-4 rounded-xl shadow-sm mb-4 animate-in fade-in slide-in-from-top-2">
               <form onSubmit={handleSaveInfo} className="space-y-3">
-                <input 
-                  type="text" 
-                  placeholder="Judul (Contoh: Undangan Rapat)" 
-                  required
-                  value={infoData.title}
-                  onChange={(e) => setInfoData({...infoData, title: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg text-sm p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <textarea 
-                  placeholder="Keterangan lengkap..." 
-                  required
-                  rows="3"
-                  value={infoData.desc}
-                  onChange={(e) => setInfoData({...infoData, desc: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg text-sm p-2.5 focus:ring-blue-500 focus:border-blue-500"
-                ></textarea>
-                
-                <div className="border border-dashed border-slate-300 rounded-lg p-3 text-center relative hover:bg-slate-50 transition">
-                  <input 
-                    type="file" 
-                    accept="image/*,.pdf"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  {infoData.fileName ? (
-                    <div className="flex flex-col items-center justify-center gap-1 text-green-600">
-                      <CheckCircle2 className="w-6 h-6" />
-                      <span className="text-xs font-medium truncate w-full px-4">{infoData.fileName}</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
-                      <UploadCloud className="w-6 h-6 text-slate-400" />
-                      <span className="text-xs font-medium">Klik untuk upload foto / PDF</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-200">Batal</button>
-                  <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700">Posting Info</button>
-                </div>
+                <input type="text" placeholder="Judul..." required value={infoData.title} onChange={(e) => setInfoData({...infoData, title: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-blue-500" />
+                <textarea placeholder="Keterangan..." required rows="3" value={infoData.desc} onChange={(e) => setInfoData({...infoData, desc: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2" />
+                <div className="flex gap-2 pt-2"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button> <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">Posting</button></div>
               </form>
             </div>
           )}
-
-          <div className="space-y-3 mt-2">
-            {agendas.length === 0 ? (
-              <div className="text-center p-6 bg-white border border-slate-100 rounded-xl shadow-sm">
-                 <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                 <p className="text-sm text-slate-400 font-medium">Belum ada informasi yang diposting.</p>
-              </div>
-            ) : (
-              agendas.map(agenda => (
-                <div key={agenda.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 relative">
-                  {userRole === 'PENGURUS' && (
-                     <button 
-                        onClick={() => {
-                          const newAgendas = agendas.filter(a => a.id !== agenda.id);
-                          setAgendas(newAgendas);
-                          saveToDatabase('agendas', newAgendas);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded"
-                     ><Trash2 className="w-4 h-4"/></button>
-                  )}
-                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded w-fit">{agenda.date}</span>
-                  <h4 className="font-bold text-slate-800 pr-12">{agenda.title}</h4>
-                  <p className="text-xs text-slate-600 whitespace-pre-line">{agenda.desc}</p>
-                  {agenda.fileName && (
-                    <div className="flex items-center gap-2 mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                      {agenda.fileName.match(/\.(jpg|jpeg|png|gif)$/i) ? <ImageIcon className="w-4 h-4 text-blue-500 shrink-0" /> : <FileText className="w-4 h-4 text-red-500 shrink-0" />}
-                      <span className="text-xs text-slate-600 font-medium truncate">{agenda.fileName}</span>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          <div className="space-y-3">{agendas.map(agenda => (<div key={agenda.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 relative"> {userRole === 'PENGURUS' && (<button onClick={() => { const newAgendas = agendas.filter(a => a.id !== agenda.id); setAgendas(newAgendas); saveToDatabase('agendas', newAgendas); }} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>)} <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded w-fit">{agenda.date}</span> <h4 className="font-bold text-slate-800 pr-12">{agenda.title}</h4> <p className="text-xs text-slate-600">{agenda.desc}</p> </div>))}</div>
         </div>
-
         <div>
           <h2 className="text-lg font-bold text-slate-800 mb-1 mt-8">Inventaris Warga</h2>
-          <p className="text-xs text-slate-500 mb-3">Manajemen aset RT 09/18.</p>
-          
-          <button 
-            onClick={() => setShowAset(!showAset)} 
-            className="w-full bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between hover:bg-slate-50 transition"
-          >
-             <div className="flex items-center gap-3">
-               <div className="bg-green-100 p-2 rounded-lg"><Box className="w-5 h-5 text-green-600" /></div>
-               <span className="font-bold text-slate-700">Folder Aset Warga</span>
-             </div>
-             {showAset ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-          </button>
-
+          <button onClick={() => setShowAset(!showAset)} className="w-full bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between"> <div className="flex items-center gap-3"><div className="bg-green-100 p-2 rounded-lg"><Box className="w-5 h-5 text-green-600" /></div><span className="font-bold text-slate-700">Folder Aset Warga</span></div> {showAset ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />} </button>
           {showAset && (
             <div className="mt-3">
-              {userRole === 'PENGURUS' && !showAsetForm && (
-                <button onClick={() => setShowAsetForm(true)} className="w-full mb-3 bg-green-50 text-green-700 border border-green-200 p-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition">
-                  <PlusCircle className="w-4 h-4" /> Tambah Aset
-                </button>
-              )}
-
+              {userRole === 'PENGURUS' && !showAsetForm && (<button onClick={() => setShowAsetForm(true)} className="w-full mb-3 bg-green-50 text-green-700 border border-green-200 p-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2"><PlusCircle className="w-4 h-4" /> Tambah Aset</button>)}
               {userRole === 'PENGURUS' && showAsetForm && (
                 <div className="bg-white border border-green-200 p-4 rounded-xl shadow-sm mb-3">
-                  <h3 className="font-bold text-slate-700 mb-3 text-sm">{assetForm.id ? 'Edit Aset' : 'Tambah Aset'}</h3>
                   <form onSubmit={handleSaveAsset} className="space-y-3">
-                    <input type="text" placeholder="Nama Barang (Contoh: Kursi)" required value={assetForm.name} onChange={(e) => setAssetForm({...assetForm, name: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-green-500 focus:border-green-500" />
-                    <input type="text" placeholder="Jumlah (Contoh: 120 Unit)" required value={assetForm.count} onChange={(e) => setAssetForm({...assetForm, count: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-green-500 focus:border-green-500" />
-                    <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={() => {setShowAsetForm(false); setAssetForm({id: null, name:'', count:''})}} className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button>
-                      <button type="submit" className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold">Simpan</button>
-                    </div>
+                    <input type="text" placeholder="Nama Barang..." required value={assetForm.name} onChange={(e) => setAssetForm({...assetForm, name: e.target.value})} className="w-full border rounded-lg text-sm p-2" />
+                    <input type="text" placeholder="Jumlah..." required value={assetForm.count} onChange={(e) => setAssetForm({...assetForm, count: e.target.value})} className="w-full border rounded-lg text-sm p-2" />
+                    <div className="flex gap-2"><button type="button" onClick={() => setShowAsetForm(false)} className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button> <button type="submit" className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold">Simpan</button></div>
                   </form>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                 {assets.map((item) => (
-                    <div key={item.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center items-center relative group">
-                      {userRole === 'PENGURUS' && (
-                        <div className="absolute top-1 right-1 flex gap-1">
-                           <button onClick={() => handleEditAsset(item)} className="p-1 text-slate-300 hover:text-blue-500 rounded"><Edit3 className="w-3.5 h-3.5" /></button>
-                           <button onClick={() => handleDeleteAsset(item.id)} className="p-1 text-slate-300 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      )}
-                      <div className="font-bold text-slate-700 text-sm mt-2">{item.name}</div>
-                      <div className="text-xs text-green-600 font-bold mt-1 bg-green-50 px-2 py-0.5 rounded-full inline-block">{item.count}</div>
-                    </div>
-                 ))}
-              </div>
+              <div className="grid grid-cols-2 gap-3"> {assets.map((item) => (<div key={item.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center items-center relative"> {userRole === 'PENGURUS' && (<div className="absolute top-1 right-1 flex gap-1"><button onClick={() => { setAssetForm(item); setShowAsetForm(true); }} className="p-1 text-slate-300 hover:text-blue-500"><Edit3 className="w-3.5 h-3.5" /></button><button onClick={() => handleDeleteAsset(item.id)} className="p-1 text-slate-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></div>)} <div className="font-bold text-slate-700 text-sm mt-2">{item.name}</div> <div className="text-xs text-green-600 font-bold mt-1 bg-green-50 px-2 py-0.5 rounded-full inline-block">{item.count}</div> </div>))} </div>
             </div>
           )}
         </div>
@@ -1272,11 +669,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex justify-center">
       <div className="w-full max-w-md bg-slate-50 min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+        {/* BACKGROUND LOGO BLUR */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 z-0">
+          <img src="/logo-bogor.png" alt="" className="w-[150%] max-w-none blur-sm" />
+        </div>
         
-        {/* Top App Bar */}
         <div className="bg-white px-6 py-4 shadow-sm z-10 flex items-center justify-between">
           <div className="flex items-center">
-            {/* LOGO BOGOR */}
             <img src="/logo-bogor.png" alt="Logo Bogor" className="w-10 h-10 object-contain mr-3" onError={(e) => e.target.style.display='none'} />
             <div>
               <h1 className="text-xl font-extrabold text-green-700 tracking-tight">VILLA PERMATA MAS 1</h1>
@@ -1293,8 +692,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 pb-24">
+        <div className="flex-1 overflow-y-auto p-4 pb-24 z-10">
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'iuran' && <IuranView />}
           {activeTab === 'thr' && <ThrView />}
@@ -1304,64 +702,28 @@ export default function App() {
           {activeTab === 'pengajian' && <PengajianView />}
         </div>
 
-        {/* QRIS Modal */}
         {showQrisModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-xs relative flex flex-col items-center">
-              <button 
-                onClick={() => setShowQrisModal(false)}
-                className="absolute top-4 right-4 p-1.5 bg-slate-100 text-slate-500 hover:text-slate-800 rounded-full transition z-10"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
+              <button onClick={() => setShowQrisModal(false)} className="absolute top-4 right-4 p-1.5 bg-slate-100 text-slate-500 hover:text-slate-800 rounded-full transition z-10"><X className="w-5 h-5" /></button>
               <h3 className="font-extrabold text-blue-800 mb-1 mt-2 text-xl tracking-tight">QRIS MANDIRI</h3>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">A.N. IVAN RAHMAN</p>
-              
               <div className="w-64 h-64 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center p-2 mb-6 shadow-inner relative overflow-hidden">
-                 {/* GAMBAR QRIS */}
                  <img src="/qris.jpeg" alt="QRIS Scan" className="w-full h-full object-contain rounded-xl mix-blend-multiply" onError={(e) => e.target.src='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=1170011106804'} />
-                 <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_3px_rgba(59,130,246,0.6)] animate-[pulse_2s_ease-in-out_infinite]" style={{animation: 'scan 2s linear infinite'}}></div>
+                 <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-lg animate-[scan_2s_linear_infinite]"></div>
               </div>
-              
-              <p className="text-[11px] text-center text-slate-500 px-4">
-                Silakan scan kode QR di atas untuk melakukan pembayaran otomatis via m-banking atau e-wallet.
-              </p>
-              
-              <style>{`
-                @keyframes scan {
-                  0% { top: 0%; opacity: 0; }
-                  10% { opacity: 1; }
-                  90% { opacity: 1; }
-                  100% { top: 100%; opacity: 0; }
-                }
-              `}</style>
+              <p className="text-[11px] text-center text-slate-500 px-4">Scan kode QR di atas untuk pembayaran via m-banking atau e-wallet.</p>
             </div>
           </div>
         )}
-
-        {/* Bottom Navigation */}
+        <style>{`@keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }`}</style>
+        
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-3 flex justify-between items-center z-20">
-          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'dashboard' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            <LayoutDashboard className={`w-5 h-5 ${activeTab === 'dashboard' ? 'fill-green-100' : ''}`} />
-            <span className="text-[9px] font-medium">Beranda</span>
-          </button>
-          <button onClick={() => setActiveTab('iuran')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'iuran' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            <Users className={`w-5 h-5 ${activeTab === 'iuran' ? 'fill-green-100' : ''}`} />
-            <span className="text-[9px] font-medium">Iuran</span>
-          </button>
-          <button onClick={() => setActiveTab('kas')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'kas' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            <Wallet className={`w-5 h-5 ${activeTab === 'kas' ? 'fill-green-100' : ''}`} />
-            <span className="text-[9px] font-medium">Transaksi</span>
-          </button>
-          <button onClick={() => setActiveTab('laporan')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'laporan' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            <FileSpreadsheet className={`w-5 h-5 ${activeTab === 'laporan' ? 'fill-green-100' : ''}`} />
-            <span className="text-[9px] font-medium">Laporan</span>
-          </button>
-          <button onClick={() => setActiveTab('info')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'info' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            <Info className={`w-5 h-5 ${activeTab === 'info' ? 'fill-green-100' : ''}`} />
-            <span className="text-[9px] font-medium">Info</span>
-          </button>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'dashboard' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}><LayoutDashboard className="w-5 h-5" /><span className="text-[9px] font-medium">Beranda</span></button>
+          <button onClick={() => setActiveTab('iuran')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'iuran' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}><Users className="w-5 h-5" /><span className="text-[9px] font-medium">Iuran</span></button>
+          <button onClick={() => setActiveTab('kas')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'kas' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}><Wallet className="w-5 h-5" /><span className="text-[9px] font-medium">Transaksi</span></button>
+          <button onClick={() => setActiveTab('laporan')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'laporan' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}><FileSpreadsheet className="w-5 h-5" /><span className="text-[9px] font-medium">Laporan</span></button>
+          <button onClick={() => setActiveTab('info')} className={`flex flex-col items-center flex-1 gap-1 ${activeTab === 'info' ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'}`}><Info className="w-5 h-5" /><span className="text-[9px] font-medium">Info</span></button>
         </div>
       </div>
     </div>
