@@ -462,12 +462,29 @@ export default function App() {
   };
 
   const IuranView = () => {
+    const [rincian, setRincian] = useState({ pokok: 58000, sampah: 20000, keamanan: 20000, kasRw: 1000, kasRt: 13000, sosial: 3000, posyandu: 1000 });
+    const [isEditingRincian, setIsEditingRincian] = useState(false);
+
+    useEffect(() => {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'rincianIuran');
+      const unsub = onSnapshot(docRef, (snap) => {
+        if(snap.exists()) setRincian(snap.data());
+      });
+      return () => unsub();
+    }, []);
+
+    const saveRincian = async () => {
+      if (userRole !== 'PENGURUS') return;
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'rincianIuran');
+      await setDoc(docRef, rincian, { merge: true });
+      setIsEditingRincian(false);
+    };
+
     const togglePaymentGrid = (residentId, m) => { 
       if (userRole !== 'PENGURUS') return; 
       const newResidents = residents.map(r => { 
         if (r.id === residentId) { 
           const newPayments = { ...r.payments }; 
-          // FIX: Clone the object to prevent shallow state mutation bugs
           const yearPayments = { ...(newPayments[selectedYearIuran] || {}) };
           if (Object.values(yearPayments).includes('LUNAS')) { 
             for(let i=0; i<12; i++) yearPayments[i] = r.defaultAmount; 
@@ -482,22 +499,61 @@ export default function App() {
       setResidents(newResidents); 
       saveToDatabase('residents', newResidents); 
     };
+
     const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchIuran.toLowerCase()) || r.block.toLowerCase().includes(searchIuran.toLowerCase()) );
+
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
         <div className="flex items-center justify-between shrink-0">
           <div><h2 className="text-lg font-bold text-slate-800">Pencatatan Iuran</h2><p className="text-xs text-slate-500">Pilih tahun riwayat.</p></div>
           <select value={selectedYearIuran} onChange={(e) => setSelectedYearIuran(Number(e.target.value))} className="bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg focus:ring-green-500 block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
         </div>
+        
         <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 shrink-0">
-          <h3 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1"><Info className="w-4 h-4"/> Rincian Iuran Bulanan (Pokok: Rp 58.000)</h3>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-blue-700"> <p>a. Uang Sampah: Rp20.000</p> <p>b. Uang Keamanan: Rp20.000</p> <p>c. Kas RW: Rp1.000</p> <p>d. Kas RT: Rp13.000</p> <p>e. Uang Sosial: Rp3.000</p> <p>f. Posyandu: Rp1.000</p> </div>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-xs font-bold text-blue-800 flex items-center gap-1">
+              <Info className="w-4 h-4"/> Rincian Iuran Bulanan (Pokok: Rp {rincian.pokok.toLocaleString('id-ID')})
+            </h3>
+            {userRole === 'PENGURUS' && !isEditingRincian && (
+              <button onClick={() => setIsEditingRincian(true)} className="text-blue-500 hover:text-blue-700">
+                <Edit3 className="w-3 h-3" />
+              </button>
+            )}
+            {isEditingRincian && (
+              <div className="flex gap-2">
+                <button onClick={saveRincian} className="bg-blue-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+                <button onClick={() => setIsEditingRincian(false)} className="bg-slate-300 text-slate-700 p-1 rounded"><X className="w-3 h-3"/></button>
+              </div>
+            )}
+          </div>
+          
+          {isEditingRincian ? (
+            <div className="grid grid-cols-2 gap-2 text-[10px] text-blue-800">
+              <div className="flex items-center justify-between gap-1"><span>Pokok:</span><input type="number" value={rincian.pokok} onChange={e=>setRincian({...rincian, pokok: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>a. Sampah:</span><input type="number" value={rincian.sampah} onChange={e=>setRincian({...rincian, sampah: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>b. Keamanan:</span><input type="number" value={rincian.keamanan} onChange={e=>setRincian({...rincian, keamanan: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>c. Kas RW:</span><input type="number" value={rincian.kasRw} onChange={e=>setRincian({...rincian, kasRw: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>d. Kas RT:</span><input type="number" value={rincian.kasRt} onChange={e=>setRincian({...rincian, kasRt: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>e. Sosial:</span><input type="number" value={rincian.sosial} onChange={e=>setRincian({...rincian, sosial: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+              <div className="flex items-center justify-between gap-1"><span>f. Posyandu:</span><input type="number" value={rincian.posyandu} onChange={e=>setRincian({...rincian, posyandu: Number(e.target.value)})} className="w-16 p-0.5 rounded border focus:outline-none" /></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-blue-700">
+              <p>a. Uang Sampah: Rp{rincian.sampah.toLocaleString('id-ID')}</p>
+              <p>b. Uang Keamanan: Rp{rincian.keamanan.toLocaleString('id-ID')}</p>
+              <p>c. Kas RW: Rp{rincian.kasRw.toLocaleString('id-ID')}</p>
+              <p>d. Kas RT: Rp{rincian.kasRt.toLocaleString('id-ID')}</p>
+              <p>e. Uang Sosial: Rp{rincian.sosial.toLocaleString('id-ID')}</p>
+              <p>f. Posyandu: Rp{rincian.posyandu.toLocaleString('id-ID')}</p>
+            </div>
+          )}
         </div>
+        
         <div className="relative shrink-0">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div>
           <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchIuran} onChange={(e) => setSearchIuran(e.target.value)} />
         </div>
-        <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
+        <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
           <div className="overflow-auto flex-1">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 text-slate-600"><tr><th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-sm whitespace-nowrap">Nama Warga</th>{MONTHS.map((m, i) => (<th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-sm">{m.slice(0,3)}</th>))}</tr></thead>
@@ -528,30 +584,110 @@ export default function App() {
   };
 
   const ThrView = () => {
-    const toggleThrPayment = (residentId) => { 
+    const [editingThrId, setEditingThrId] = useState(null);
+    const [tempThrAmount, setTempThrAmount] = useState('');
+    const [baseThr, setBaseThr] = useState(50000);
+    const [isEditingBaseThr, setIsEditingBaseThr] = useState(false);
+
+    const saveThr = (residentId) => { 
       if (userRole !== 'PENGURUS') return; 
+      const amount = Number(tempThrAmount);
       const newResidents = residents.map(r => { 
         if (r.id === residentId) { 
           const currentThr = r.thrPayments || {}; 
-          return { ...r, thrPayments: { ...currentThr, [selectedYearThr]: !currentThr[selectedYearThr] } }; 
+          return { ...r, thrPayments: { ...currentThr, [selectedYearThr]: amount } }; 
         } 
         return r; 
       }); 
       setResidents(newResidents); 
       saveToDatabase('residents', newResidents); 
+      setEditingThrId(null);
     };
+
+    const deleteThr = (residentId) => { 
+      if (userRole !== 'PENGURUS') return; 
+      const newResidents = residents.map(r => { 
+        if (r.id === residentId) { 
+          const currentThr = { ...r.thrPayments }; 
+          delete currentThr[selectedYearThr];
+          return { ...r, thrPayments: currentThr }; 
+        } 
+        return r; 
+      }); 
+      setResidents(newResidents); 
+      saveToDatabase('residents', newResidents); 
+      setEditingThrId(null);
+    };
+
     const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchThr.toLowerCase()) || r.block.toLowerCase().includes(searchThr.toLowerCase()));
-    const thrNominal = 50000;
-    const totalTerkumpul = filteredWarga.reduce((sum, r) => sum + (r.thrPayments?.[selectedYearThr] ? thrNominal : 0), 0);
+    
+    const totalTerkumpul = filteredWarga.reduce((sum, r) => {
+      const val = r.thrPayments?.[selectedYearThr];
+      return sum + (typeof val === 'number' ? val : (val ? baseThr : 0));
+    }, 0);
+
     return (
       <div className="h-[75vh] flex flex-col space-y-3">
-        <div className="flex items-center justify-between shrink-0"><div><h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2><p className="text-xs text-yellow-600">Rp 50.000 / Warga</p></div> <select value={selectedYearThr} onChange={(e) => setSelectedYearThr(Number(e.target.value))} className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select></div>
+        <div className="flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2>
+            {isEditingBaseThr && userRole === 'PENGURUS' ? (
+              <div className="flex items-center gap-2 mt-1">
+                <input type="number" autoFocus value={baseThr} onChange={(e) => setBaseThr(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-yellow-400 rounded focus:outline-none" />
+                <button onClick={() => setIsEditingBaseThr(false)} className="bg-yellow-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-yellow-600">Rp {baseThr.toLocaleString('id-ID')} / Warga</p>
+                {userRole === 'PENGURUS' && (
+                  <button onClick={() => setIsEditingBaseThr(true)} className="text-yellow-500 hover:text-yellow-700">
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div> 
+          <select value={selectedYearThr} onChange={(e) => setSelectedYearThr(Number(e.target.value))} className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
+        </div>
         <div className="bg-yellow-100 p-4 rounded-xl border border-yellow-200 flex justify-between items-center shrink-0"><span className="text-sm font-bold text-yellow-800">Total Terkumpul:</span><span className="text-lg font-extrabold text-yellow-700">{formatRp(totalTerkumpul)}</span></div>
         <div className="relative shrink-0"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div><input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-yellow-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchThr} onChange={(e) => setSearchThr(e.target.value)} /></div>
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
           <div className="overflow-auto flex-1">
             <div className="divide-y divide-slate-100">
-              {filteredWarga.map((warga) => { const isPaid = warga.thrPayments?.[selectedYearThr]; return (<div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'} ${userRole === 'PENGURUS' ? 'cursor-pointer' : 'cursor-default'}`} onClick={() => toggleThrPayment(warga.id)}> <div><div className="font-semibold text-slate-800 text-sm">{warga.name}</div><div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div></div> <div className="flex items-center gap-3"> {isPaid ? (<span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">LUNAS</span>) : (<span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>)} <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> </div> </div>)})}
+              {filteredWarga.map((warga) => { 
+                const thrVal = warga.thrPayments?.[selectedYearThr];
+                const isPaid = !!thrVal;
+                const paidAmount = typeof thrVal === 'number' ? thrVal : (thrVal ? baseThr : 0);
+                
+                return (
+                  <div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'}`}> 
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{warga.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div>
+                    </div> 
+                    {editingThrId === warga.id && userRole === 'PENGURUS' ? (
+                      <div className="flex items-center gap-1">
+                        <input type="number" autoFocus value={tempThrAmount} onChange={(e) => setTempThrAmount(e.target.value)} className="w-20 p-1.5 text-xs font-bold text-slate-800 border border-yellow-400 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white" placeholder="Nominal" />
+                        <button onClick={() => saveThr(warga.id)} className="bg-yellow-500 hover:bg-yellow-600 text-white p-1.5 rounded"><Save className="w-4 h-4"/></button>
+                        <button onClick={() => deleteThr(warga.id)} className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded"><Trash2 className="w-4 h-4"/></button>
+                        <button onClick={() => setEditingThrId(null)} className="bg-slate-300 hover:bg-slate-400 text-slate-700 p-1.5 rounded"><X className="w-4 h-4"/></button>
+                      </div>
+                    ) : (
+                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingThrId(warga.id); setTempThrAmount(isPaid ? paidAmount : baseThr); } }}>
+                        {isPaid ? (
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded inline-block mb-1">LUNAS</span>
+                            <div className="text-xs font-bold text-slate-700">{formatRp(paidAmount)}</div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>
+                        )} 
+                        <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-yellow-500 fill-yellow-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> 
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -594,7 +730,7 @@ export default function App() {
           <div className="p-3 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">Riwayat Bulan {MONTHS[selectedMth]}</div>
           <div className="divide-y divide-slate-100">
             {currentTrans.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm">Belum ada transaksi.</div>) : (
-              currentTrans.map((t) => (<div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition"> <div className="flex-1"> <div className="flex items-center gap-2"> {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />} <span className="font-semibold text-sm text-slate-800">{t.category}</span> </div> <div className="flex items-center gap-1 mt-1 ml-6 text-xs"> <span className="font-medium text-slate-500">{t.date || '-'}</span> {t.description && <span className="text-slate-400">• {t.description}</span>} </div> </div> <div className="text-right flex items-center gap-4"> <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>{t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}</span> {userRole === 'PENGURUS' && (<div className="flex items-center gap-1"><button onClick={() => handleEdit(t)} className="text-slate-300 hover:text-blue-500 p-1"><Edit3 className="w-4 h-4" /></button><button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button></div>)} </div> </div>))
+              currentTrans.map((t) => (<div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition"> <div className="flex-1"> <div className="flex items-center gap-2"> {t.type === 'in' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />} <span className="font-semibold text-sm text-slate-800">{t.category}</span> </div> <div className="flex items-center gap-1 mt-1 ml-6 text-xs"> <span className="font-medium text-slate-500">{t.date || '-'}</span> {t.description && <span className="text-slate-400">• {t.description}</span>} </div> </div> <div className="text-right flex items-center gap-4"> <span className={`font-bold text-sm ${t.type === 'in' ? 'text-green-600' : 'text-slate-800'}`}>{t.type === 'out' ? '-' : '+'}{formatRp(t.amount)}</span> {userRole === 'PENGURUS' && (<div className="flex items-center gap-1"><button onClick={() => deleteTrans(t.id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button></div>)} </div> </div>))
             )}
           </div>
         </div>
@@ -652,12 +788,48 @@ export default function App() {
   const InfoView = () => {
     const [showAset, setShowAset] = useState(false);
     const [showForm, setShowForm] = useState(false);
-    const [infoData, setInfoData] = useState({ title: '', desc: '', fileName: '' });
+    // Tambahan state fileData dan fileType untuk menampung format preview gambar/pdf
+    const [infoData, setInfoData] = useState({ title: '', desc: '', fileName: '', fileData: '', fileType: '' });
     const [showAsetForm, setShowAsetForm] = useState(false);
     const [assetForm, setAssetForm] = useState({ id: null, name: '', count: '' });
-    const handleSaveInfo = (e) => { e.preventDefault(); const newAgenda = { id: Date.now(), title: infoData.title, desc: infoData.desc, fileName: infoData.fileName, date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }; const newAgendas = [newAgenda, ...agendas]; setAgendas(newAgendas); saveToDatabase('agendas', newAgendas); setShowForm(false); setInfoData({ title: '', desc: '', fileName: '' }); };
+    
+    const handleSaveInfo = (e) => { 
+      e.preventDefault(); 
+      const newAgenda = { 
+        id: Date.now(), 
+        title: infoData.title, 
+        desc: infoData.desc, 
+        fileName: infoData.fileName, 
+        fileData: infoData.fileData, // Menyimpan format file agar bisa dirender
+        fileType: infoData.fileType, // Tipe file
+        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) 
+      }; 
+      const newAgendas = [newAgenda, ...agendas]; 
+      setAgendas(newAgendas); 
+      saveToDatabase('agendas', newAgendas); 
+      setShowForm(false); 
+      setInfoData({ title: '', desc: '', fileName: '', fileData: '', fileType: '' }); 
+    };
+    
     const handleSaveAsset = (e) => { e.preventDefault(); let newAssets = []; if (assetForm.id) { newAssets = assets.map(a => a.id === assetForm.id ? { ...a, name: assetForm.name, count: assetForm.count } : a); } else { newAssets = [...assets, { id: Date.now(), name: assetForm.name, count: assetForm.count }]; } setAssets(newAssets); saveToDatabase('assets', newAssets); setShowAsetForm(false); setAssetForm({ id: null, name: '', count: '' }); };
     const handleDeleteAsset = (id) => { const newAssets = assets.filter(a => a.id !== id); setAssets(newAssets); saveToDatabase('assets', newAssets); };
+    
+    const handleFileChange = (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setInfoData({ 
+            ...infoData, 
+            fileName: file.name,
+            fileData: reader.result,
+            fileType: file.type
+          });
+        };
+        reader.readAsDataURL(file); // Konversi file ke URL agar bisa tampil
+      }
+    };
+
     return (
       <div className="space-y-6 pb-12">
         <div>
@@ -668,11 +840,58 @@ export default function App() {
               <form onSubmit={handleSaveInfo} className="space-y-3">
                 <input type="text" placeholder="Judul..." required value={infoData.title} onChange={(e) => setInfoData({...infoData, title: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2 focus:ring-blue-500" />
                 <textarea placeholder="Keterangan..." required rows="3" value={infoData.desc} onChange={(e) => setInfoData({...infoData, desc: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2" />
+                
+                <div className="border border-dashed border-slate-300 rounded-lg p-3 text-center relative hover:bg-slate-50 transition mt-2">
+                  <input type="file" accept="image/jpeg, image/png, application/pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  {infoData.fileData ? (
+                    <div className="flex flex-col items-center justify-center gap-2 text-green-600">
+                      {infoData.fileType?.includes('image') || infoData.fileName.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                        <img src={infoData.fileData} alt="Preview" className="h-24 object-contain rounded" />
+                      ) : (
+                        <FileText className="w-8 h-8 text-red-500" />
+                      )}
+                      <span className="text-xs font-medium truncate w-full px-4">{infoData.fileName}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1 text-slate-500"><UploadCloud className="w-5 h-5 text-slate-400" /><span className="text-xs font-medium">Upload JPG / PDF</span></div>
+                  )}
+                </div>
+
                 <div className="flex gap-2 pt-2"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">Batal</button> <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">Posting</button></div>
               </form>
             </div>
           )}
-          <div className="space-y-3">{agendas.map(agenda => (<div key={agenda.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 relative"> {userRole === 'PENGURUS' && (<button onClick={() => { const newAgendas = agendas.filter(a => a.id !== agenda.id); setAgendas(newAgendas); saveToDatabase('agendas', newAgendas); }} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>)} <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded w-fit">{agenda.date}</span> <h4 className="font-bold text-slate-800 pr-12">{agenda.title}</h4> <p className="text-xs text-slate-600">{agenda.desc}</p> </div>))}</div>
+          <div className="space-y-3">
+            {agendas.map(agenda => (
+              <div key={agenda.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 relative"> 
+                {userRole === 'PENGURUS' && (<button onClick={() => { const newAgendas = agendas.filter(a => a.id !== agenda.id); setAgendas(newAgendas); saveToDatabase('agendas', newAgendas); }} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>)} 
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded w-fit">{agenda.date}</span> 
+                <h4 className="font-bold text-slate-800 pr-12">{agenda.title}</h4> 
+                <p className="text-xs text-slate-600 whitespace-pre-line">{agenda.desc}</p> 
+                
+                {/* TAMPILAN FILE LANGSUNG DI SLIDE */}
+                {agenda.fileData ? (
+                  <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                    {agenda.fileType?.includes('image') || agenda.fileName?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                      <img src={agenda.fileData} alt={agenda.fileName} className="w-full h-auto max-h-64 object-contain" />
+                    ) : agenda.fileType?.includes('pdf') || agenda.fileName?.toLowerCase().endsWith('.pdf') ? (
+                      <iframe src={agenda.fileData} className="w-full h-64 border-none" title={agenda.fileName} />
+                    ) : (
+                      <div className="flex items-center gap-2 p-2">
+                        <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span className="text-xs text-slate-600 font-medium truncate">{agenda.fileName}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : agenda.fileName && (
+                  <div className="flex items-center gap-2 mt-1 p-2 bg-slate-50 border border-slate-200 rounded-lg w-fit max-w-full">
+                    {agenda.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500 shrink-0" /> : <ImageIcon className="w-4 h-4 text-blue-500 shrink-0" />}
+                    <span className="text-xs text-slate-600 font-medium truncate">{agenda.fileName}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
         <div>
           <h2 className="text-lg font-bold text-slate-800 mb-1 mt-8">Inventaris Warga</h2>
