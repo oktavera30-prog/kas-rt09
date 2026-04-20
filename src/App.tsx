@@ -3,7 +3,7 @@ import {
   Users, Wallet, FileSpreadsheet, LayoutDashboard, PlusCircle, CheckCircle2, Circle,
   ArrowUpRight, ArrowDownRight, Download, Trash2, Save, Search, Info, Gift, Box, Calendar, 
   Wrench, QrCode, CreditCard, ChevronDown, ChevronUp, Copy, X, UploadCloud, Image as ImageIcon, 
-  FileText, Lock, Loader2, Edit3, BookOpen, Heart
+  FileText, Lock, Loader2, Edit3, BookOpen, Heart, Building, Megaphone, Camera
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -144,6 +144,10 @@ export default function App() {
   const [assets, setAssets] = useState([]); 
   const [pengajianData, setPengajianData] = useState({ saldo: 0, info: '' });
 
+  // === PENAMBAHAN STATE UNTUK FITUR BARU ===
+  const [laporanWarga, setLaporanWarga] = useState([]);
+  const [customIuranTitle, setCustomIuranTitle] = useState('Iuran Balai RT');
+
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -153,6 +157,8 @@ export default function App() {
   const [selectedYearIuran, setSelectedYearIuran] = useState(currentYearAuto);
   const [searchThr, setSearchThr] = useState('');
   const [selectedYearThr, setSelectedYearThr] = useState(currentYearAuto);
+  const [searchCustom, setSearchCustom] = useState('');
+  const [selectedYearCustom, setSelectedYearCustom] = useState(currentYearAuto);
   const [selectedYearLaporan, setSelectedYearLaporan] = useState(currentYearAuto);
 
   useEffect(() => {
@@ -192,7 +198,9 @@ export default function App() {
           agendas: [],
           assets: [],
           saldoAwalTahun: 1168500,
-          pengajianData: { saldo: 0, info: '' }
+          pengajianData: { saldo: 0, info: '' },
+          laporanWarga: [],
+          customIuranTitle: 'Iuran Balai RT'
         }).catch((err) => console.log("Lokal mode aktif."));
       } else {
         const data = snapshot.data();
@@ -202,6 +210,8 @@ export default function App() {
         if(data.agendas) setAgendas(data.agendas);
         if(data.assets) setAssets(data.assets);
         if(data.pengajianData) setPengajianData(data.pengajianData);
+        if(data.laporanWarga) setLaporanWarga(data.laporanWarga);
+        if(data.customIuranTitle) setCustomIuranTitle(data.customIuranTitle);
       }
       setDbLoading(false);
     }, (err) => {
@@ -218,6 +228,16 @@ export default function App() {
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
     } catch (err) {
       console.log("Sinkronisasi cloud ditunda.");
+    }
+  };
+
+  // Fungsi khusus menyimpan Laporan agar Warga/Guest bisa mensubmit laporannya
+  const saveLaporanToDatabase = async (dataToSave) => {
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
+      await setDoc(docRef, { laporanWarga: dataToSave }, { merge: true });
+    } catch (err) {
+      console.log("Sinkronisasi cloud laporan ditunda.");
     }
   };
 
@@ -383,6 +403,96 @@ export default function App() {
     );
   };
 
+  // KOMPONEN LAPOR WARGA BARU
+  const LaporWargaView = () => {
+    const [form, setForm] = useState({ nama: '', nomor: '', foto: '', fotoName: '', laporan: '' });
+
+    const handleFile = (e) => {
+      const file = e.target.files[0];
+      if(file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setForm({...form, foto: reader.result, fotoName: file.name});
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if(!form.nama || !form.nomor) return alert('Nama dan Nomor Rumah wajib diisi!');
+      const newLapor = {
+         id: Date.now(),
+         ...form,
+         date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+      };
+      const updated = [newLapor, ...laporanWarga];
+      setLaporanWarga(updated);
+      saveLaporanToDatabase(updated); // Menggunakan fungsi khusus agar warga bisa simpan
+      setForm({ nama: '', nomor: '', foto: '', fotoName: '', laporan: '' });
+      alert("Laporan berhasil dikirim ke Pengurus RT!");
+    };
+
+    return (
+      <div className="space-y-4 pb-12">
+        <h2 className="text-lg font-bold text-red-800">Lapor Warga</h2>
+        
+        {/* Form Lapor (Bisa diakses oleh Guest/Warga/Pengurus) */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <h3 className="font-bold text-slate-700 mb-3">Buat Laporan Baru</h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input type="text" placeholder="Nama Pelapor *" required value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2.5 focus:ring-red-500" />
+            <input type="text" placeholder="Nomor Rumah *" required value={form.nomor} onChange={e => setForm({...form, nomor: e.target.value})} className="w-full border border-slate-200 rounded-lg text-sm p-2.5 focus:ring-red-500" />
+            <textarea placeholder="Isi Laporan / Pengaduan..." required value={form.laporan} onChange={e => setForm({...form, laporan: e.target.value})} rows="3" className="w-full border border-slate-200 rounded-lg text-sm p-2.5 focus:ring-red-500" />
+            
+            <div className="border border-dashed border-slate-300 rounded-lg p-3 text-center relative hover:bg-slate-50 transition">
+              <input type="file" accept="image/jpeg, image/png" onChange={handleFile} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              {form.foto ? (
+                <div className="flex flex-col items-center gap-1 text-green-600">
+                  <img src={form.foto} className="h-20 object-contain rounded" alt="Preview" />
+                  <span className="text-xs truncate w-full px-4">{form.fotoName}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1 text-slate-500">
+                  <Camera className="w-5 h-5 text-slate-400" />
+                  <span className="text-xs font-medium">Upload Foto (Opsional, JPG/PNG)</span>
+                </div>
+              )}
+            </div>
+            
+            <button type="submit" className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-bold flex justify-center gap-2 hover:bg-red-700">Kirim Laporan</button>
+          </form>
+        </div>
+
+        {/* Riwayat Laporan (Hanya PENGURUS yang bisa hapus) */}
+        <div className="space-y-3">
+          <h3 className="font-bold text-slate-700 text-sm mt-4">Riwayat Pengaduan</h3>
+          {laporanWarga.length === 0 ? (
+             <p className="text-xs text-slate-400 text-center py-4 bg-white rounded-xl border border-slate-100">Belum ada laporan dari warga.</p>
+          ) : laporanWarga.map((l) => (
+             <div key={l.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 relative">
+               {userRole === 'PENGURUS' && (
+                 <button onClick={() => {
+                   if(window.confirm('Hapus laporan ini?')){
+                     const updated = laporanWarga.filter(item => item.id !== l.id);
+                     setLaporanWarga(updated);
+                     saveLaporanToDatabase(updated);
+                   }
+                 }} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 bg-slate-50 p-1.5 rounded"><Trash2 className="w-4 h-4"/></button>
+               )}
+               <div className="text-[10px] text-slate-400 mb-1">{l.date}</div>
+               <div className="font-bold text-sm text-slate-800">{l.nama} <span className="font-medium text-slate-500">({l.nomor})</span></div>
+               <p className="text-xs text-slate-600 mt-1 whitespace-pre-line">{l.laporan}</p>
+               {l.foto && (
+                 <img src={l.foto} alt="Lampiran" className="mt-2 rounded-lg max-h-40 object-contain border border-slate-100" />
+               )}
+             </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const DashboardView = () => {
     const dataBulanIni = laporanData[currentMonthIdx];
     const [isEditingSaldo, setIsEditingSaldo] = useState(false);
@@ -422,7 +532,8 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="grid grid-cols-3 gap-3">
           <button onClick={() => setActiveTab('iuran')} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition">
             <div className="bg-blue-100 p-2.5 rounded-full text-blue-600"><Users className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-slate-700">IURAN</span>
@@ -437,9 +548,20 @@ export default function App() {
           </button>
           <button onClick={() => setActiveTab('pengajian')} className="bg-emerald-50 p-3 rounded-2xl shadow-sm border border-emerald-200 flex flex-col items-center justify-center gap-2 hover:bg-emerald-100 transition relative overflow-hidden">
             <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600"><BookOpen className="w-5 h-5" /></div>
-            <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight uppercase">Saldo Pengajian</span>
+            <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight uppercase">Pengajian</span>
+          </button>
+          {/* MENU BARU 1: IURAN BALAI RT */}
+          <button onClick={() => setActiveTab('customIuran')} className="bg-indigo-50 p-3 rounded-2xl shadow-sm border border-indigo-200 flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 transition relative overflow-hidden">
+            <div className="bg-indigo-100 p-2.5 rounded-full text-indigo-600"><Building className="w-5 h-5" /></div>
+            <span className="text-[10px] font-semibold text-indigo-800 text-center leading-tight line-clamp-2">{customIuranTitle}</span>
+          </button>
+          {/* MENU BARU 2: LAPOR WARGA */}
+          <button onClick={() => setActiveTab('laporWarga')} className="bg-red-50 p-3 rounded-2xl shadow-sm border border-red-200 flex flex-col items-center justify-center gap-2 hover:bg-red-100 transition relative overflow-hidden">
+            <div className="bg-red-100 p-2.5 rounded-full text-red-600"><Megaphone className="w-5 h-5" /></div>
+            <span className="text-[11px] font-semibold text-red-800 text-center leading-tight">Lapor Warga</span>
           </button>
         </div>
+
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative">
           <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-slate-600" /> Info Rekening & Pembayaran</h3>
           <div className="flex items-center gap-4">
@@ -695,6 +817,141 @@ export default function App() {
     );
   };
 
+  // KOMPONEN IURAN KUSTOM BARU (IURAN BALAI RT)
+  const CustomIuranView = () => {
+    const [editingId, setEditingId] = useState(null);
+    const [tempAmount, setTempAmount] = useState('');
+    const [baseAmount, setBaseAmount] = useState(50000);
+    const [isEditingBase, setIsEditingBase] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [tempTitle, setTempTitle] = useState(customIuranTitle);
+
+    const handleSaveTitle = () => {
+      if (userRole !== 'PENGURUS') return;
+      setCustomIuranTitle(tempTitle);
+      saveToDatabase('customIuranTitle', tempTitle);
+      setIsEditingTitle(false);
+    };
+
+    const saveCustom = (residentId) => { 
+      if (userRole !== 'PENGURUS') return; 
+      const amount = Number(tempAmount);
+      const newResidents = residents.map(r => { 
+        if (r.id === residentId) { 
+          const currentCustom = r.customPayments || {}; 
+          return { ...r, customPayments: { ...currentCustom, [selectedYearCustom]: amount } }; 
+        } 
+        return r; 
+      }); 
+      setResidents(newResidents); 
+      saveToDatabase('residents', newResidents); 
+      setEditingId(null);
+    };
+
+    const deleteCustom = (residentId) => { 
+      if (userRole !== 'PENGURUS') return; 
+      const newResidents = residents.map(r => { 
+        if (r.id === residentId) { 
+          const currentCustom = { ...r.customPayments }; 
+          delete currentCustom[selectedYearCustom];
+          return { ...r, customPayments: currentCustom }; 
+        } 
+        return r; 
+      }); 
+      setResidents(newResidents); 
+      saveToDatabase('residents', newResidents); 
+      setEditingId(null);
+    };
+
+    const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchCustom.toLowerCase()) || r.block.toLowerCase().includes(searchCustom.toLowerCase()));
+    
+    const totalTerkumpul = filteredWarga.reduce((sum, r) => {
+      const val = r.customPayments?.[selectedYearCustom];
+      return sum + (typeof val === 'number' ? val : (val ? baseAmount : 0));
+    }, 0);
+
+    return (
+      <div className="h-[75vh] flex flex-col space-y-3">
+        <div className="flex items-center justify-between shrink-0">
+          <div>
+            {isEditingTitle && userRole === 'PENGURUS' ? (
+               <div className="flex items-center gap-2 mb-1">
+                  <input type="text" autoFocus value={tempTitle} onChange={e=>setTempTitle(e.target.value)} className="w-32 p-1 text-sm font-bold border border-indigo-400 rounded focus:outline-none" />
+                  <button onClick={handleSaveTitle} className="bg-indigo-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+               </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                 <h2 className="text-lg font-bold text-indigo-800">{customIuranTitle}</h2>
+                 {userRole === 'PENGURUS' && (
+                   <button onClick={() => setIsEditingTitle(true)} className="text-indigo-400 hover:text-indigo-600"><Edit3 className="w-3 h-3" /></button>
+                 )}
+              </div>
+            )}
+
+            {isEditingBase && userRole === 'PENGURUS' ? (
+              <div className="flex items-center gap-2 mt-1">
+                <input type="number" autoFocus value={baseAmount} onChange={(e) => setBaseAmount(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-indigo-400 rounded focus:outline-none" />
+                <button onClick={() => setIsEditingBase(false)} className="bg-indigo-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-indigo-600">Rp {baseAmount.toLocaleString('id-ID')} / Warga</p>
+                {userRole === 'PENGURUS' && (
+                  <button onClick={() => setIsEditingBase(true)} className="text-indigo-400 hover:text-indigo-600">
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div> 
+          <select value={selectedYearCustom} onChange={(e) => setSelectedYearCustom(Number(e.target.value))} className="bg-indigo-50 border border-indigo-300 text-indigo-800 text-sm font-semibold rounded-lg block p-2 shadow-sm"> {YEARS.map(y => <option key={y} value={y}>Tahun {y}</option>)} </select>
+        </div>
+        <div className="bg-indigo-100 p-4 rounded-xl border border-indigo-200 flex justify-between items-center shrink-0"><span className="text-sm font-bold text-indigo-800">Total Terkumpul:</span><span className="text-lg font-extrabold text-indigo-700">{formatRp(totalTerkumpul)}</span></div>
+        <div className="relative shrink-0"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div><input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-indigo-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchCustom} onChange={(e) => setSearchCustom(e.target.value)} /></div>
+        <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
+          <div className="overflow-auto flex-1">
+            <div className="divide-y divide-slate-100">
+              {filteredWarga.map((warga) => { 
+                const payVal = warga.customPayments?.[selectedYearCustom];
+                const isPaid = !!payVal;
+                const paidAmount = typeof payVal === 'number' ? payVal : (payVal ? baseAmount : 0);
+                
+                return (
+                  <div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}> 
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{warga.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Blok: {warga.block}</div>
+                    </div> 
+                    {editingId === warga.id && userRole === 'PENGURUS' ? (
+                      <div className="flex items-center gap-1">
+                        <input type="number" autoFocus value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} className="w-20 p-1.5 text-xs font-bold text-slate-800 border border-indigo-400 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="Nominal" />
+                        <button onClick={() => saveCustom(warga.id)} className="bg-indigo-500 hover:bg-indigo-600 text-white p-1.5 rounded"><Save className="w-4 h-4"/></button>
+                        <button onClick={() => deleteCustom(warga.id)} className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded"><Trash2 className="w-4 h-4"/></button>
+                        <button onClick={() => setEditingId(null)} className="bg-slate-300 hover:bg-slate-400 text-slate-700 p-1.5 rounded"><X className="w-4 h-4"/></button>
+                      </div>
+                    ) : (
+                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingId(warga.id); setTempAmount(isPaid ? paidAmount : baseAmount); } }}>
+                        {isPaid ? (
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded inline-block mb-1">LUNAS</span>
+                            <div className="text-xs font-bold text-slate-700">{formatRp(paidAmount)}</div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">BELUM</span>
+                        )} 
+                        <div>{isPaid ? (<CheckCircle2 className="w-7 h-7 text-indigo-500 fill-indigo-100" />) : (<Circle className="w-7 h-7 text-slate-300" />)}</div> 
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const KasView = () => {
     const [selectedMth, setSelectedMth] = useState(currentMonthIdx);
     const [showForm, setShowForm] = useState(false);
@@ -788,22 +1045,13 @@ export default function App() {
   const InfoView = () => {
     const [showAset, setShowAset] = useState(false);
     const [showForm, setShowForm] = useState(false);
-    // Tambahan state fileData dan fileType untuk menampung format preview gambar/pdf
     const [infoData, setInfoData] = useState({ title: '', desc: '', fileName: '', fileData: '', fileType: '' });
     const [showAsetForm, setShowAsetForm] = useState(false);
     const [assetForm, setAssetForm] = useState({ id: null, name: '', count: '' });
     
     const handleSaveInfo = (e) => { 
       e.preventDefault(); 
-      const newAgenda = { 
-        id: Date.now(), 
-        title: infoData.title, 
-        desc: infoData.desc, 
-        fileName: infoData.fileName, 
-        fileData: infoData.fileData, // Menyimpan format file agar bisa dirender
-        fileType: infoData.fileType, // Tipe file
-        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) 
-      }; 
+      const newAgenda = { id: Date.now(), title: infoData.title, desc: infoData.desc, fileName: infoData.fileName, fileData: infoData.fileData, fileType: infoData.fileType, date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }; 
       const newAgendas = [newAgenda, ...agendas]; 
       setAgendas(newAgendas); 
       saveToDatabase('agendas', newAgendas); 
@@ -826,7 +1074,7 @@ export default function App() {
             fileType: file.type
           });
         };
-        reader.readAsDataURL(file); // Konversi file ke URL agar bisa tampil
+        reader.readAsDataURL(file);
       }
     };
 
@@ -946,10 +1194,12 @@ export default function App() {
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'iuran' && <IuranView />}
           {activeTab === 'thr' && <ThrView />}
+          {activeTab === 'customIuran' && <CustomIuranView />}
           {activeTab === 'kas' && <KasView />}
           {activeTab === 'laporan' && <LaporanView />}
           {activeTab === 'info' && <InfoView />}
           {activeTab === 'pengajian' && <PengajianView />}
+          {activeTab === 'laporWarga' && <LaporWargaView />}
         </div>
 
         {showQrisModal && (
