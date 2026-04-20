@@ -147,6 +147,8 @@ export default function App() {
   // === PENAMBAHAN STATE UNTUK FITUR BARU ===
   const [laporanWarga, setLaporanWarga] = useState([]);
   const [customIuranTitle, setCustomIuranTitle] = useState('Iuran Balai RT');
+  const [customIuranBaseAmount, setCustomIuranBaseAmount] = useState(120000);
+  const [thrBaseAmount, setThrBaseAmount] = useState(50000);
 
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -200,7 +202,9 @@ export default function App() {
           saldoAwalTahun: 1168500,
           pengajianData: { saldo: 0, info: '' },
           laporanWarga: [],
-          customIuranTitle: 'Iuran Balai RT'
+          customIuranTitle: 'Iuran Balai RT',
+          customIuranBaseAmount: 120000,
+          thrBaseAmount: 50000
         }).catch((err) => console.log("Lokal mode aktif."));
       } else {
         const data = snapshot.data();
@@ -212,13 +216,15 @@ export default function App() {
         if(data.pengajianData) setPengajianData(data.pengajianData);
         if(data.laporanWarga) setLaporanWarga(data.laporanWarga);
         if(data.customIuranTitle) setCustomIuranTitle(data.customIuranTitle);
+        if(data.customIuranBaseAmount !== undefined) setCustomIuranBaseAmount(data.customIuranBaseAmount);
+        if(data.thrBaseAmount !== undefined) setThrBaseAmount(data.thrBaseAmount);
       }
       setDbLoading(false);
     }, (err) => {
       setDbLoading(false);
     });
     return () => unsub();
-  }, []); // FIX: Menghapus dependency user
+  }, []); 
 
   const saveToDatabase = async (key, dataToSave) => {
     // FIX: Hanya mengecek apakah sedang login PENGURUS, tidak perlu ngecek user Firebase 
@@ -231,7 +237,6 @@ export default function App() {
     }
   };
 
-  // Fungsi khusus menyimpan Laporan agar Warga/Guest bisa mensubmit laporannya
   const saveLaporanToDatabase = async (dataToSave) => {
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
@@ -351,6 +356,7 @@ export default function App() {
     );
   }
 
+  // --- KOMPONEN HALAMAN ---
   const PengajianView = () => {
     const [isEditingPengajian, setIsEditingPengajian] = useState(false);
     const [tempPengajian, setTempPengajian] = useState(0);
@@ -403,7 +409,6 @@ export default function App() {
     );
   };
 
-  // KOMPONEN LAPOR WARGA BARU
   const LaporWargaView = () => {
     const [form, setForm] = useState({ nama: '', nomor: '', foto: '', fotoName: '', laporan: '' });
 
@@ -428,7 +433,7 @@ export default function App() {
       };
       const updated = [newLapor, ...laporanWarga];
       setLaporanWarga(updated);
-      saveLaporanToDatabase(updated); // Menggunakan fungsi khusus agar warga bisa simpan
+      saveLaporanToDatabase(updated); 
       setForm({ nama: '', nomor: '', foto: '', fotoName: '', laporan: '' });
       alert("Laporan berhasil dikirim ke Pengurus RT!");
     };
@@ -437,7 +442,6 @@ export default function App() {
       <div className="space-y-4 pb-12">
         <h2 className="text-lg font-bold text-red-800">Lapor Warga</h2>
         
-        {/* Form Lapor (Bisa diakses oleh Guest/Warga/Pengurus) */}
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
           <h3 className="font-bold text-slate-700 mb-3">Buat Laporan Baru</h3>
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -464,7 +468,6 @@ export default function App() {
           </form>
         </div>
 
-        {/* Riwayat Laporan (Hanya PENGURUS yang bisa hapus) */}
         <div className="space-y-3">
           <h3 className="font-bold text-slate-700 text-sm mt-4">Riwayat Pengaduan</h3>
           {laporanWarga.length === 0 ? (
@@ -708,8 +711,15 @@ export default function App() {
   const ThrView = () => {
     const [editingThrId, setEditingThrId] = useState(null);
     const [tempThrAmount, setTempThrAmount] = useState('');
-    const [baseThr, setBaseThr] = useState(50000);
+    const [tempBaseThr, setTempBaseThr] = useState(thrBaseAmount);
     const [isEditingBaseThr, setIsEditingBaseThr] = useState(false);
+
+    const handleSaveBaseThr = () => {
+      if (userRole !== 'PENGURUS') return;
+      setThrBaseAmount(tempBaseThr);
+      saveToDatabase('thrBaseAmount', tempBaseThr);
+      setIsEditingBaseThr(false);
+    };
 
     const saveThr = (residentId) => { 
       if (userRole !== 'PENGURUS') return; 
@@ -745,7 +755,7 @@ export default function App() {
     
     const totalTerkumpul = filteredWarga.reduce((sum, r) => {
       const val = r.thrPayments?.[selectedYearThr];
-      return sum + (typeof val === 'number' ? val : (val ? baseThr : 0));
+      return sum + (typeof val === 'number' ? val : (val ? thrBaseAmount : 0));
     }, 0);
 
     return (
@@ -755,14 +765,14 @@ export default function App() {
             <h2 className="text-lg font-bold text-yellow-800">Pencatatan Iuran THR</h2>
             {isEditingBaseThr && userRole === 'PENGURUS' ? (
               <div className="flex items-center gap-2 mt-1">
-                <input type="number" autoFocus value={baseThr} onChange={(e) => setBaseThr(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-yellow-400 rounded focus:outline-none" />
-                <button onClick={() => setIsEditingBaseThr(false)} className="bg-yellow-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+                <input type="number" autoFocus value={tempBaseThr} onChange={(e) => setTempBaseThr(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-yellow-400 rounded focus:outline-none" />
+                <button onClick={handleSaveBaseThr} className="bg-yellow-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-xs text-yellow-600">Rp {baseThr.toLocaleString('id-ID')} / Warga</p>
+                <p className="text-xs text-yellow-600">Rp {thrBaseAmount.toLocaleString('id-ID')} / Warga</p>
                 {userRole === 'PENGURUS' && (
-                  <button onClick={() => setIsEditingBaseThr(true)} className="text-yellow-500 hover:text-yellow-700">
+                  <button onClick={() => { setIsEditingBaseThr(true); setTempBaseThr(thrBaseAmount); }} className="text-yellow-500 hover:text-yellow-700">
                     <Edit3 className="w-3 h-3" />
                   </button>
                 )}
@@ -779,7 +789,7 @@ export default function App() {
               {filteredWarga.map((warga) => { 
                 const thrVal = warga.thrPayments?.[selectedYearThr];
                 const isPaid = !!thrVal;
-                const paidAmount = typeof thrVal === 'number' ? thrVal : (thrVal ? baseThr : 0);
+                const paidAmount = typeof thrVal === 'number' ? thrVal : (thrVal ? thrBaseAmount : 0);
                 
                 return (
                   <div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-yellow-50/30' : 'hover:bg-slate-50'}`}> 
@@ -795,7 +805,7 @@ export default function App() {
                         <button onClick={() => setEditingThrId(null)} className="bg-slate-300 hover:bg-slate-400 text-slate-700 p-1.5 rounded"><X className="w-4 h-4"/></button>
                       </div>
                     ) : (
-                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingThrId(warga.id); setTempThrAmount(isPaid ? paidAmount : baseThr); } }}>
+                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingThrId(warga.id); setTempThrAmount(isPaid ? paidAmount : thrBaseAmount); } }}>
                         {isPaid ? (
                           <div className="text-right">
                             <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded inline-block mb-1">LUNAS</span>
@@ -817,11 +827,10 @@ export default function App() {
     );
   };
 
-  // KOMPONEN IURAN KUSTOM BARU (IURAN BALAI RT)
   const CustomIuranView = () => {
     const [editingId, setEditingId] = useState(null);
     const [tempAmount, setTempAmount] = useState('');
-    const [baseAmount, setBaseAmount] = useState(50000);
+    const [tempBase, setTempBase] = useState(customIuranBaseAmount);
     const [isEditingBase, setIsEditingBase] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [tempTitle, setTempTitle] = useState(customIuranTitle);
@@ -831,6 +840,13 @@ export default function App() {
       setCustomIuranTitle(tempTitle);
       saveToDatabase('customIuranTitle', tempTitle);
       setIsEditingTitle(false);
+    };
+
+    const handleSaveBase = () => {
+      if (userRole !== 'PENGURUS') return;
+      setCustomIuranBaseAmount(tempBase);
+      saveToDatabase('customIuranBaseAmount', tempBase);
+      setIsEditingBase(false);
     };
 
     const saveCustom = (residentId) => { 
@@ -867,7 +883,7 @@ export default function App() {
     
     const totalTerkumpul = filteredWarga.reduce((sum, r) => {
       const val = r.customPayments?.[selectedYearCustom];
-      return sum + (typeof val === 'number' ? val : (val ? baseAmount : 0));
+      return sum + (typeof val === 'number' ? val : (val ? customIuranBaseAmount : 0));
     }, 0);
 
     return (
@@ -890,14 +906,14 @@ export default function App() {
 
             {isEditingBase && userRole === 'PENGURUS' ? (
               <div className="flex items-center gap-2 mt-1">
-                <input type="number" autoFocus value={baseAmount} onChange={(e) => setBaseAmount(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-indigo-400 rounded focus:outline-none" />
-                <button onClick={() => setIsEditingBase(false)} className="bg-indigo-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
+                <input type="number" autoFocus value={tempBase} onChange={(e) => setTempBase(Number(e.target.value))} className="w-24 p-1 text-xs font-bold text-slate-800 border border-indigo-400 rounded focus:outline-none" />
+                <button onClick={handleSaveBase} className="bg-indigo-500 text-white p-1 rounded"><CheckCircle2 className="w-3 h-3"/></button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-xs text-indigo-600">Rp {baseAmount.toLocaleString('id-ID')} / Warga</p>
+                <p className="text-xs text-indigo-600">Rp {customIuranBaseAmount.toLocaleString('id-ID')} / Warga</p>
                 {userRole === 'PENGURUS' && (
-                  <button onClick={() => setIsEditingBase(true)} className="text-indigo-400 hover:text-indigo-600">
+                  <button onClick={() => { setIsEditingBase(true); setTempBase(customIuranBaseAmount); }} className="text-indigo-400 hover:text-indigo-600">
                     <Edit3 className="w-3 h-3" />
                   </button>
                 )}
@@ -914,7 +930,7 @@ export default function App() {
               {filteredWarga.map((warga) => { 
                 const payVal = warga.customPayments?.[selectedYearCustom];
                 const isPaid = !!payVal;
-                const paidAmount = typeof payVal === 'number' ? payVal : (payVal ? baseAmount : 0);
+                const paidAmount = typeof payVal === 'number' ? payVal : (payVal ? customIuranBaseAmount : 0);
                 
                 return (
                   <div key={warga.id} className={`p-4 flex items-center justify-between transition ${isPaid ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}> 
@@ -930,7 +946,7 @@ export default function App() {
                         <button onClick={() => setEditingId(null)} className="bg-slate-300 hover:bg-slate-400 text-slate-700 p-1.5 rounded"><X className="w-4 h-4"/></button>
                       </div>
                     ) : (
-                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingId(warga.id); setTempAmount(isPaid ? paidAmount : baseAmount); } }}>
+                      <div className={`flex items-center gap-3 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:opacity-80' : ''}`} onClick={() => { if (userRole === 'PENGURUS') { setEditingId(warga.id); setTempAmount(isPaid ? paidAmount : customIuranBaseAmount); } }}>
                         {isPaid ? (
                           <div className="text-right">
                             <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded inline-block mb-1">LUNAS</span>
