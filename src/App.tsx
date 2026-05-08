@@ -190,7 +190,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // FIX: Membuang syarat (if !user return;) agar aplikasi tidak memblokir akses database Bapak
+    // FIX KEAMANAN: Syarat if (!user) DIHAPUS agar aplikasi langsung berani narik data walaupun Firebase Anonymous mati
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -224,10 +224,10 @@ export default function App() {
       setDbLoading(false);
     });
     return () => unsub();
-  }, []); 
+  }, []); // FIX: Dependensi [user] juga ikut dihapus 
 
   const saveToDatabase = async (key, dataToSave) => {
-    // FIX: Hanya mengecek apakah sedang login PENGURUS, tidak perlu ngecek user Firebase 
+    // FIX: Syarat user Firebase dihapus, sekarang cukup cek apakah dia Pengurus
     if(userRole !== 'PENGURUS') return; 
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
@@ -589,17 +589,22 @@ export default function App() {
   const IuranView = () => {
     const [rincian, setRincian] = useState({ pokok: 58000, sampah: 20000, keamanan: 20000, kasRw: 1000, kasRt: 13000, sosial: 3000, posyandu: 1000 });
     const [isEditingRincian, setIsEditingRincian] = useState(false);
+    
+    // BARU: State & fungsi untuk Kelola Warga
+    const [wargaForm, setWargaForm] = useState({ id: null, name: '', block: '', defaultAmount: 62000 });
+    const [showWargaForm, setShowWargaForm] = useState(false);
 
+    // FIX KEAMANAN: Syarat if (!user) DIHAPUS agar aplikasi langsung berani narik data walaupun Firebase Anonymous mati
     useEffect(() => {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'rincianIuran');
       const unsub = onSnapshot(docRef, (snap) => {
         if(snap.exists()) setRincian(snap.data());
       });
       return () => unsub();
-    }, []);
+    }, []); 
 
     const saveRincian = async () => {
-      if (userRole !== 'PENGURUS') return;
+      if (userRole !== 'PENGURUS') return; 
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'rincianIuran');
       await setDoc(docRef, rincian, { merge: true });
       setIsEditingRincian(false);
@@ -623,6 +628,39 @@ export default function App() {
       }); 
       setResidents(newResidents); 
       saveToDatabase('residents', newResidents); 
+    };
+
+    // BARU: Fungsi Simpan Data Warga
+    const handleSaveWarga = (e) => {
+      e.preventDefault();
+      if (userRole !== 'PENGURUS') return;
+      let newResidents;
+      if (wargaForm.id) {
+        newResidents = residents.map(r => r.id === wargaForm.id ? { ...r, name: wargaForm.name.toUpperCase(), block: wargaForm.block.toUpperCase(), defaultAmount: Number(wargaForm.defaultAmount) } : r);
+      } else {
+        const newWarga = {
+          id: Date.now(),
+          name: wargaForm.name.toUpperCase(),
+          block: wargaForm.block.toUpperCase(),
+          defaultAmount: Number(wargaForm.defaultAmount),
+          payments: {}
+        };
+        newResidents = [...residents, newWarga];
+      }
+      setResidents(newResidents);
+      saveToDatabase('residents', newResidents);
+      setShowWargaForm(false);
+      setWargaForm({ id: null, name: '', block: '', defaultAmount: rincian.pokok || 62000 });
+    };
+
+    // BARU: Fungsi Hapus Data Warga
+    const handleDeleteWarga = (id) => {
+      if (userRole !== 'PENGURUS') return;
+      if (window.confirm('Yakin ingin menghapus data warga ini beserta seluruh riwayat iurannya?')) {
+        const newResidents = residents.filter(r => r.id !== id);
+        setResidents(newResidents);
+        saveToDatabase('residents', newResidents);
+      }
     };
 
     const filteredWarga = residents.filter(r => r.name.toLowerCase().includes(searchIuran.toLowerCase()) || r.block.toLowerCase().includes(searchIuran.toLowerCase()) );
@@ -674,15 +712,58 @@ export default function App() {
           )}
         </div>
         
-        <div className="relative shrink-0">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div>
-          <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchIuran} onChange={(e) => setSearchIuran(e.target.value)} />
+        {/* BARU: Area Pencarian dan Tombol Tambah Warga */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><Search className="w-4 h-4 text-slate-400" /></div>
+            <input type="text" className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-green-500 block w-full pl-10 p-3" placeholder="Cari nama warga atau blok..." value={searchIuran} onChange={(e) => setSearchIuran(e.target.value)} />
+          </div>
+          {userRole === 'PENGURUS' && (
+            <button onClick={() => { setShowWargaForm(true); setWargaForm({ id: null, name: '', block: '', defaultAmount: rincian.pokok || 62000 }); }} className="bg-green-600 text-white p-3 rounded-xl shadow-sm hover:bg-green-700 shrink-0">
+              <PlusCircle className="w-5 h-5" />
+            </button>
+          )}
         </div>
+
+        {/* BARU: Form Kelola Warga */}
+        {showWargaForm && userRole === 'PENGURUS' && (
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm shrink-0 animate-in fade-in slide-in-from-top-2">
+            <h3 className="font-bold text-slate-700 text-sm mb-3">{wargaForm.id ? 'Edit Data Warga' : 'Tambah Warga Baru'}</h3>
+            <form onSubmit={handleSaveWarga} className="space-y-3">
+              <input type="text" placeholder="Nama Warga (Cth: BPK. BUDI)" required value={wargaForm.name} onChange={e => setWargaForm({...wargaForm, name: e.target.value})} className="w-full border border-slate-200 p-2.5 rounded-lg text-sm focus:ring-green-500 focus:border-green-500" />
+              <div className="flex gap-2">
+                <input type="text" placeholder="Blok/No (Cth: CA12)" required value={wargaForm.block} onChange={e => setWargaForm({...wargaForm, block: e.target.value})} className="w-1/2 border border-slate-200 p-2.5 rounded-lg text-sm focus:ring-green-500 focus:border-green-500" />
+                <input type="number" placeholder="Iuran Pokok (Rp)" required value={wargaForm.defaultAmount} onChange={e => setWargaForm({...wargaForm, defaultAmount: e.target.value})} className="w-1/2 border border-slate-200 p-2.5 rounded-lg text-sm focus:ring-green-500 focus:border-green-500" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setShowWargaForm(false)} className="flex-1 bg-slate-100 text-slate-600 p-2.5 rounded-lg text-sm font-bold hover:bg-slate-200">Batal</button>
+                <button type="submit" className="flex-1 bg-green-600 text-white p-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><Save className="w-4 h-4"/> Simpan</button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
           <div className="overflow-auto flex-1">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 text-slate-600"><tr><th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-sm whitespace-nowrap">Nama Warga</th>{MONTHS.map((m, i) => (<th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-sm">{m.slice(0,3)}</th>))}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{filteredWarga.map((warga) => (<tr key={warga.id} className="hover:bg-slate-50 transition"><td className="sticky left-0 bg-white p-3 z-10 shadow-sm flex flex-col whitespace-nowrap"><span className="font-semibold text-slate-800">{warga.name}</span><span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span></td>{MONTHS.map((m, i) => { const paymentsYear = warga.payments[selectedYearIuran] || {}; const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS'); return (<td key={i} className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`} onClick={() => togglePaymentGrid(warga.id, i)}><div className="flex justify-center items-center h-full">{isPaid ? (<CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />) : (<Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />)}</div></td>);})}</tr>))}</tbody>
+              <thead className="bg-slate-50 text-slate-600"><tr><th className="sticky top-0 left-0 bg-slate-100 p-3 z-30 shadow-sm whitespace-nowrap min-w-[160px]">Nama Warga</th>{MONTHS.map((m, i) => (<th key={i} className="sticky top-0 bg-slate-50 p-3 text-center min-w-[50px] font-semibold z-20 shadow-sm">{m.slice(0,3)}</th>))}</tr></thead>
+              <tbody className="divide-y divide-slate-100">{filteredWarga.map((warga) => (<tr key={warga.id} className="hover:bg-slate-50 transition">
+                <td className="sticky left-0 bg-white p-3 z-10 shadow-sm whitespace-nowrap min-w-[160px]">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-800">{warga.name}</span>
+                      <span className="text-[10px] text-slate-500">{warga.block} • {formatRp(warga.defaultAmount)}</span>
+                    </div>
+                    {/* BARU: Tombol Edit & Delete Warga */}
+                    {userRole === 'PENGURUS' && (
+                      <div className="flex gap-1 ml-3">
+                        <button onClick={(e) => { e.stopPropagation(); setWargaForm({id: warga.id, name: warga.name, block: warga.block, defaultAmount: warga.defaultAmount}); setShowWargaForm(true); }} className="text-blue-500 bg-blue-50 p-1.5 rounded-md hover:bg-blue-100"><Edit3 className="w-3.5 h-3.5"/></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteWarga(warga.id); }} className="text-red-500 bg-red-50 p-1.5 rounded-md hover:bg-red-100"><Trash2 className="w-3.5 h-3.5"/></button>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                {MONTHS.map((m, i) => { const paymentsYear = warga.payments[selectedYearIuran] || {}; const isPaid = paymentsYear[i] || Object.values(paymentsYear).includes('LUNAS'); return (<td key={i} className={`p-2 text-center border-l border-slate-50 ${userRole === 'PENGURUS' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`} onClick={() => togglePaymentGrid(warga.id, i)}><div className="flex justify-center items-center h-full">{isPaid ? (<CheckCircle2 className="w-6 h-6 text-green-500 fill-green-100" />) : (<Circle className="w-6 h-6 text-slate-200 hover:text-green-300" />)}</div></td>);})}</tr>))}</tbody>
               <tfoot className="bg-green-50 font-semibold relative z-20">
                 <tr>
                   <td className="sticky bottom-0 left-0 bg-green-100 p-3 z-30 shadow-sm text-green-800 text-[11px] whitespace-nowrap">Total Terkumpul</td>
