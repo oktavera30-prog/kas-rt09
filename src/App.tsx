@@ -190,26 +190,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // FIX KEAMANAN: Syarat if (!user) DIHAPUS agar aplikasi langsung berani narik data walaupun Firebase Anonymous mati
+    if (!user) return;
+    // PERBAIKAN FATAL: Menghapus logika yang memaksa reset database ke INITIAL_RESIDENTS jika tidak sengaja terbaca kosong
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
     const unsub = onSnapshot(docRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        setDoc(docRef, {
-          residents: INITIAL_RESIDENTS_FILLED,
-          transactions: INITIAL_TRANSACTIONS,
-          agendas: [],
-          assets: [],
-          saldoAwalTahun: 1168500,
-          pengajianData: { saldo: 0, info: '' },
-          laporanWarga: [],
-          customIuranTitle: 'Iuran Balai RT',
-          customIuranBaseAmount: 120000,
-          thrBaseAmount: 50000
-        }).catch((err) => console.log("Lokal mode aktif."));
-      } else {
+      if (snapshot.exists()) {
         const data = snapshot.data();
         if(data.saldoAwalTahun !== undefined) setSaldoAwalTahun(data.saldoAwalTahun);
-        if(data.residents) setResidents(data.residents);
+        
+        // Pengecekan ekstra agar tidak menyimpan error 'undefined' ke memori HP
+        if(data.residents && data.residents.length > 0) setResidents(data.residents);
         if(data.transactions) setTransactions(data.transactions);
         if(data.agendas) setAgendas(data.agendas);
         if(data.assets) setAssets(data.assets);
@@ -218,17 +208,21 @@ export default function App() {
         if(data.customIuranTitle) setCustomIuranTitle(data.customIuranTitle);
         if(data.customIuranBaseAmount !== undefined) setCustomIuranBaseAmount(data.customIuranBaseAmount);
         if(data.thrBaseAmount !== undefined) setThrBaseAmount(data.thrBaseAmount);
+      } else {
+        // JIKA KOSONG: Biarkan saja memakai data memori HP (INITIAL_RESIDENTS). 
+        // JANGAN MELAKUKAN overwrite/setDoc ke database Firebase di sini.
+        console.log("Database online belum terbuat atau sedang lag. Menggunakan data memori HP.");
       }
       setDbLoading(false);
     }, (err) => {
+      console.error("Gagal menarik data Firebase:", err);
       setDbLoading(false);
     });
     return () => unsub();
-  }, []); // FIX: Dependensi [user] juga ikut dihapus 
+  }, [user]); 
 
   const saveToDatabase = async (key, dataToSave) => {
-    // FIX: Syarat user Firebase dihapus, sekarang cukup cek apakah dia Pengurus
-    if(userRole !== 'PENGURUS') return; 
+    if(!user || userRole !== 'PENGURUS') return; 
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
       await setDoc(docRef, { [key]: dataToSave }, { merge: true });
@@ -238,6 +232,7 @@ export default function App() {
   };
 
   const saveLaporanToDatabase = async (dataToSave) => {
+    if(!user) return; 
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'mainData');
       await setDoc(docRef, { laporanWarga: dataToSave }, { merge: true });
@@ -356,7 +351,6 @@ export default function App() {
     );
   }
 
-  // --- KOMPONEN HALAMAN ---
   const PengajianView = () => {
     const [isEditingPengajian, setIsEditingPengajian] = useState(false);
     const [tempPengajian, setTempPengajian] = useState(0);
@@ -553,12 +547,10 @@ export default function App() {
             <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600"><BookOpen className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-emerald-800 text-center leading-tight uppercase">Pengajian</span>
           </button>
-          {/* MENU BARU 1: IURAN BALAI RT */}
           <button onClick={() => setActiveTab('customIuran')} className="bg-indigo-50 p-3 rounded-2xl shadow-sm border border-indigo-200 flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 transition relative overflow-hidden">
             <div className="bg-indigo-100 p-2.5 rounded-full text-indigo-600"><Building className="w-5 h-5" /></div>
             <span className="text-[10px] font-semibold text-indigo-800 text-center leading-tight line-clamp-2">{customIuranTitle}</span>
           </button>
-          {/* MENU BARU 2: LAPOR WARGA */}
           <button onClick={() => setActiveTab('laporWarga')} className="bg-red-50 p-3 rounded-2xl shadow-sm border border-red-200 flex flex-col items-center justify-center gap-2 hover:bg-red-100 transition relative overflow-hidden">
             <div className="bg-red-100 p-2.5 rounded-full text-red-600"><Megaphone className="w-5 h-5" /></div>
             <span className="text-[11px] font-semibold text-red-800 text-center leading-tight">Lapor Warga</span>
@@ -594,7 +586,6 @@ export default function App() {
     const [wargaForm, setWargaForm] = useState({ id: null, name: '', block: '', defaultAmount: 62000 });
     const [showWargaForm, setShowWargaForm] = useState(false);
 
-    // FIX KEAMANAN: Syarat if (!user) DIHAPUS agar aplikasi langsung berani narik data walaupun Firebase Anonymous mati
     useEffect(() => {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'rincianIuran');
       const unsub = onSnapshot(docRef, (snap) => {
@@ -1117,7 +1108,7 @@ export default function App() {
                 <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">3. Kas RW</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.kasRW > 0 ? formatRp(d.rutin.kasRW) : '-'}</td>)}</tr>
                 <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">4. Iuran Posyandu</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.posyandu > 0 ? formatRp(d.rutin.posyandu) : '-'}</td>)}</tr>
                 <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">5. LSK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.lsk > 0 ? formatRp(d.rutin.lsk) : '-'}</td>)}</tr>
-                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">6. Admin BANK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.adminBank > 0 ? formatRp(d.rutin.adminBank) : '-'}</td>)}</tr>
+                <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">6. Admin BANK</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.rutin.adminBank > 0 ? formatRp(d.adminBank) : '-'}</td>)}</tr>
                 <tr className="border-b border-slate-200 bg-red-50 font-semibold text-red-700"><td className="sticky left-0 bg-red-50 p-2 text-right pr-4 z-10 shadow-sm">Jumlah (III)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{formatRp(d.totalRutin)}</td>)}</tr>
                 <tr className="bg-slate-50 font-bold border-b border-slate-200"><td className="sticky left-0 bg-slate-50 p-2 z-10 shadow-sm">(IV) Pengeluaran Tidak Rutin</td><td colSpan={12}></td></tr>
                 <tr className="border-b border-slate-100"><td className="sticky left-0 bg-white p-2 pl-6 z-10 shadow-sm">1. THR (Keamanan & Kebersihan)</td>{laporanData.map((d, i) => <td key={i} className="px-3 py-2 text-right">{d.tidakRutin.thr > 0 ? formatRp(d.tidakRutin.thr) : '-'}</td>)}</tr>
